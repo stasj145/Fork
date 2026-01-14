@@ -1,0 +1,32 @@
+<svg width="200" height="200" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Handle -->
+  <path 
+    d="M50,92 L50,55" 
+    stroke="#ffcd44" 
+    stroke-width="8" 
+    stroke-linecap="round" 
+  />
+  
+  <!-- Outer Tines and Head Base -->
+  <path 
+    d="M30,8 L30,42 C30,58 70,58 70,42 L70,8" 
+    stroke="#ffcd44" 
+    stroke-width="8" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  
+  <!-- Inner Tines -->
+  <path 
+    d="M43,8 L43,40" 
+    stroke="#ffcd44" 
+    stroke-width="8" 
+    stroke-linecap="round" 
+  />
+  <path 
+    d="M57,8 L57,40" 
+    stroke="#ffcd44" 
+    stroke-width="8" 
+    stroke-linecap="round" 
+  />
+</svg>

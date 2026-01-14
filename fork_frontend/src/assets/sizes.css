@@ -1,0 +1,7 @@
+:root {
+  --navbar-width: 100vw;
+  --navbar-height: 3rem;
+
+  --main-content-height: calc(100vh - 3rem);
+  --main-content-width: 100vw;
+}

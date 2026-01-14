@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  fork_postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: fork_user
+      POSTGRES_PASSWORD: fork_password
+      POSTGRES_DB: fork_db
+    networks:
+      - fork_net
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fork_user -d fork_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  fork_backend:
+    image: ghcr.io/stasj145/fork-backend
+    environment:
+      - FORK_BACKEND_ADMIN_USERNAME=admin
+      - FORK_BACKEND_ADMIN_EMAIL=fork-admin@example.com
+      - FORK_BACKEND_ADMIN_PASSWORD=admin
+      - FORK_BACKEND_SECRET_KEY=very_secret_key_here_change_this_in_production
+      - FORK_POSTGRES_USER=fork_user
+      - FORK_POSTGRES_PASSWORD=fork_password
+      - FORK_POSTGRES_DB_NAME=fork_db
+      - FORK_POSTGRES_URL=fork_postgres
+    networks:
+      - fork_net
+    depends_on:
+      fork_postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  fork_frontend:
+    image: ghcr.io/stasj145/fork-frontend
+    ports:
+      - 8080:80
+    networks:
+      - fork_net
+    environment:
+      - BACKEND_URL=http://fork_backend:8000
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  fork_net:

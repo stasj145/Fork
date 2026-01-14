@@ -1,0 +1,29 @@
+# Dependencies
+
+node_modules
+
+# Build output
+
+dist
+
+# Environment files
+
+.env
+
+# Git files
+
+.git
+.gitignore
+
+# Documentation
+
+README.md
+
+# Docker files
+
+Dockerfile
+.dockerignore
+
+# Logs
+
+npm-debug.log
