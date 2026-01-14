@@ -33,6 +33,8 @@ The api will be available at `http://localhost:8000`
 
 ### Development
 
+NOTE: For development, the OpenNutrition dataset will need to be downloaded manually and the "opennutrition_foods.tsv" placed inside the "data" directory.
+
 For development, you can also run the application directly:
 ```bash
 # Install dependencies
