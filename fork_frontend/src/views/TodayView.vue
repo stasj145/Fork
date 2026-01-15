@@ -619,6 +619,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 1rem;
   font-weight: bold;
+  white-space: nowrap;
   color: var(--color-text-primary);
 }
 
