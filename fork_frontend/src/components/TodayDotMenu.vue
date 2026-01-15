@@ -186,7 +186,7 @@ async function copyYesterday() {
         calories_burned: entry.calories_burned,
       }
       const newEntry: ActivityEntry = await fetchWrapper.post(
-        `/api/v1/log/day/${getFormattedDate()}/activity`,
+        `/api/v1/log/day/${props.date}/activity`,
         body,
       )
       entriesToAdd.value.push(newEntry)
@@ -265,18 +265,18 @@ const getYesterdayActivityLogData = async () => {
   position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
   width: 12rem;
   background-color: var(--color-accent-primary);
-  box-shadow: 0 0 10px 2px var(--color-accent-secondary);
+  box-shadow: 0 0 5px 0px var(--color-accent-primary);
   border-radius: 0.5rem;
   padding: 0.5rem;
   z-index: 1000;
 }
 
 .menu-btn {
-  width: 11rem;
-  height: 2.5rem;
+  width: 100%;
+  height: 2rem;
   background-color: var(--color-accent-secondary);
   border: none;
   border-radius: 0.25rem;
@@ -288,11 +288,13 @@ const getYesterdayActivityLogData = async () => {
 }
 
 .menu-btn span {
-  width: 100rem; /* I have no idea why this is necessary. */
-  height: 1.5rem;
-  color: var(--text-color-primary);
+  color: var(--color-text-primary);
+  width: 100%;
   font-weight: bold;
   font-size: 0.9rem;
+  line-height: 0.9rem;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .btn-delete {

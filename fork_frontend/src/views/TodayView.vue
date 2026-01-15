@@ -9,7 +9,25 @@
         :details="errorDetails"
       ></ErrorModal>
     </div>
-    <div class="today-view-content" v-if="!loading && foodLog && !entryEditMode">
+    <div
+      class="today-view-content"
+      :class="animationDirection ? `slide-${animationDirection}` : ''"
+      v-if="!loading && foodLog && !entryEditMode"
+    >
+      <div class="date-selector">
+        <div class="date-back-container">
+          <button class="date-back" @click="offsetDateToLoad(-1)">
+            <IconChevronLeft></IconChevronLeft>
+          </button>
+        </div>
+        <span class="date-current">{{ dateToLoad }}</span>
+        <div class="date-forward-today-container">
+          <button class="date-forward" @click="offsetDateToLoad(1)">
+            <IconChevronRight></IconChevronRight>
+          </button>
+          <button class="date-today" @click="resetDateToLoad">today</button>
+        </div>
+      </div>
       <div class="charts-root">
         <div class="chart-calories-left">
           <GaugeChart
@@ -37,7 +55,7 @@
           <div class="food-info-heading-dot-menu">
             <TodayDotMenu
               v-model:log-entries="breakfastEntries"
-              :date="props.date"
+              :date="dateToLoad"
               @refresh="refreshFoodEntries"
               :meal-type="'breakfast'"
               @addEntries="addFoodEntries"
@@ -63,7 +81,7 @@
           <div class="food-info-heading-dot-menu">
             <TodayDotMenu
               v-model:log-entries="lunchEntries"
-              :date="props.date"
+              :date="dateToLoad"
               @refresh="refreshFoodEntries"
               :meal-type="'lunch'"
               @addEntries="addFoodEntries"
@@ -89,7 +107,7 @@
           <div class="food-info-heading-dot-menu">
             <TodayDotMenu
               v-model:log-entries="dinnerEntries"
-              :date="props.date"
+              :date="dateToLoad"
               @refresh="refreshFoodEntries"
               :meal-type="'dinner'"
               @addEntries="addFoodEntries"
@@ -115,7 +133,7 @@
           <div class="food-info-heading-dot-menu">
             <TodayDotMenu
               v-model:log-entries="snackEntries"
-              :date="props.date"
+              :date="dateToLoad"
               @refresh="refreshFoodEntries"
               :meal-type="'snack'"
               @addEntries="addFoodEntries"
@@ -141,7 +159,7 @@
           <div class="food-info-heading-dot-menu">
             <TodayDotMenu
               v-model:log-entries="activityEntries"
-              :date="props.date"
+              :date="dateToLoad"
               @refresh="refreshActivityEntries"
               @add-entries="addActivityEntries"
               :meal-type="'activity'"
@@ -162,7 +180,7 @@
       <FoodDetails
         v-model:selectedFood="entryToEdit.food_item"
         v-model:log-entry="entryToEdit"
-        @entry-updated="loadLogData(props.date)"
+        @entry-updated="loadLogData(dateToLoad)"
         @back-requested="toggleEditEntryMode"
       ></FoodDetails>
     </div>
@@ -171,7 +189,7 @@
         v-model:selected-activity="activityEntryToEdit.activity"
         v-model:log-entry="activityEntryToEdit"
         :user="user"
-        @entry-updated="loadLogData(props.date)"
+        @entry-updated="loadLogData(dateToLoad)"
         @back-requested="toggleEditEntryMode"
       ></ActivityDetails>
     </div>
@@ -181,7 +199,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
-import { getFormattedDate } from '@/helpers/utils'
+import { getFormattedDate, getFormattedDateToday } from '@/helpers/utils'
 import type { FoodEntry, FoodLog } from '@/types/foodLog'
 import type { ActivityLog, ActivityEntry } from '@/types/activityLog'
 import type { User } from '@/types/user'
@@ -196,6 +214,8 @@ import FoodDetails from '@/components/FoodDetails/FoodDetails.vue'
 import ActivityDetails from '@/components/ActivityDetails/ActivityDetails.vue'
 import MealTypeSummary from '@/components/MealTypeSummary.vue'
 import TodayDotMenu from '@/components/TodayDotMenu.vue'
+import IconChevronLeft from '@/components/icons/IconChevronLeft.vue'
+import IconChevronRight from '@/components/icons/IconChevronRight.vue'
 
 const foodLog = ref<FoodLog | null>(null)
 const activityLog = ref<ActivityLog | null>(null)
@@ -207,6 +227,7 @@ const entryEditMode = ref(false)
 const entryToEdit = ref<FoodEntry | null>(null)
 const activityEntryToEdit = ref<ActivityEntry | null>(null)
 const disableChartAnimation = ref(false)
+const animationDirection = ref<'left' | 'right' | null>(null)
 
 const props = defineProps({
   date: {
@@ -215,19 +236,40 @@ const props = defineProps({
   },
 })
 
+const dateToLoad = ref(props.date)
+
+function offsetDateToLoad(offsetDays: number) {
+  // Set animation direction based on navigation
+  animationDirection.value = offsetDays < 0 ? 'right' : 'left'
+
+  dateToLoad.value = getFormattedDate(offsetDays, dateToLoad.value)
+  localStorage.setItem('dateToLoad', dateToLoad.value)
+  loadLogData(dateToLoad.value)
+}
+
+function resetDateToLoad() {
+  if (getFormattedDate() == localStorage.getItem('todayDate')) {
+    return
+  }
+  animationDirection.value = animationDirection.value == 'right' ? 'left' : 'right'
+  dateToLoad.value = getFormattedDate(0, getFormattedDateToday())
+  localStorage.setItem('dateToLoad', dateToLoad.value)
+  loadLogData(dateToLoad.value)
+}
+
 function refreshFoodEntries() {
   if (!foodLog.value) {
     return
   }
   disableChartAnimation.value = true
-  loadLogData(props.date)
+  loadLogData(dateToLoad.value)
 }
 
 function refreshActivityEntries() {
   if (!activityLog.value) {
     return
   }
-  loadLogData(props.date)
+  loadLogData(dateToLoad.value)
 }
 
 const loadUserData = async () => {
@@ -247,15 +289,15 @@ const loadUserData = async () => {
   }
 }
 
-const loadLogData = async (dateToLoad: string) => {
+const loadLogData = async (dateToLoadLocal: string) => {
   loading.value = true
   try {
     // Fetch food log
-    const foodResult = await fetchWrapper.get(`/api/v1/log/day/${dateToLoad}/food`)
+    const foodResult = await fetchWrapper.get(`/api/v1/log/day/${dateToLoadLocal}/food`)
     foodLog.value = foodResult
 
     // Fetch activity log
-    const activityResult = await fetchWrapper.get(`/api/v1/log/day/${dateToLoad}/activity`)
+    const activityResult = await fetchWrapper.get(`/api/v1/log/day/${dateToLoadLocal}/activity`)
     activityLog.value = activityResult
   } catch (err) {
     console.error('Error loading log data:', err)
@@ -445,7 +487,7 @@ async function addActivityEntries(entries: ActivityEntry[]) {
 
 onMounted(async () => {
   await loadUserData()
-  loadLogData(props.date)
+  loadLogData(dateToLoad.value)
 })
 </script>
 
@@ -547,6 +589,65 @@ onMounted(async () => {
   padding: 0.5rem;
 }
 
+.date-selector {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  height: 1.5rem;
+  width: 100%;
+  margin-bottom: -0.5rem;
+  justify-content: center;
+}
+
+.date-back-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+  width: 100%;
+}
+.date-back {
+  width: 1.5rem;
+  height: 100%;
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--color-background-primary);
+}
+.date-current {
+  width: fit-content;
+  align-self: center;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+
+.date-forward-today-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  justify-content: start;
+  width: 100%;
+}
+
+.date-forward {
+  width: 1.5rem;
+  height: 100%;
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--color-background-primary);
+}
+.date-today {
+  height: 100%;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: 0.5rem;
+  background-color: var(--color-background-primary);
+}
+
 @media (max-width: 480px) {
   .today-view-root {
     padding: 0.5rem;
@@ -563,6 +664,37 @@ onMounted(async () => {
 
   .summary-chart {
     margin-right: 0;
+  }
+}
+
+/* Slide animations */
+.slide-left {
+  animation: slideLeft 0.2s ease-in-out forwards;
+}
+
+.slide-right {
+  animation: slideRight 0.2s ease-in-out forwards;
+}
+
+@keyframes slideLeft {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideRight {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
 </style>

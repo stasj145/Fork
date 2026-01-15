@@ -35,13 +35,13 @@ The api will be available at `http://localhost:8000`
 
 NOTE: For development, the OpenNutrition dataset will need to be downloaded manually and the "opennutrition_foods.tsv" placed inside the "data" directory.
 
-For development, you can also run the application directly:
+For development, you can also run the application directly (bring up the DB beforehand!):
 ```bash
 # Install dependencies
-pip install .
+uv sync
 
 # Run the application
-uvicorn main:uvicorn_entry --host 0.0.0.0 --port 8000 --factory --reload
+uv run uvicorn main:uvicorn_entry --host 0.0.0.0 --port 8000 --factory --reload
 ```
 
 ### Acknowledgment
