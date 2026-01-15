@@ -1,3 +1,5 @@
+![logo](https://github.com/stasj145/Fork/blob/main/fork_frontend/public/pwa-192x192.png)
+
 # Fork
 
 Fork is a nutrition tracking system with a focus on self hosting, where your health data never leaves your control. It's built in Python + FastAPI for the backend and Vue 3 for the frontend.
