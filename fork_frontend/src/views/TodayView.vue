@@ -248,7 +248,7 @@ function offsetDateToLoad(offsetDays: number) {
 }
 
 function resetDateToLoad() {
-  if (getFormattedDate() == localStorage.getItem('todayDate')) {
+  if (getFormattedDate() == getFormattedDateToday()) {
     return
   }
   animationDirection.value = animationDirection.value == 'right' ? 'left' : 'right'
