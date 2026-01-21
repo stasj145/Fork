@@ -3,6 +3,7 @@ export function getFormattedDate(
   referenceDate: string | Date | null = null,
 ): string {
   const storageDate = localStorage.getItem('dateToLoad')
+  localStorage.setItem('lastActivityTimestamp', Date.now().toString())
 
   let date = new Date()
 
@@ -20,8 +21,6 @@ export function getFormattedDate(
   const day = String(date.getDate()).padStart(2, '0')
 
   const dateString: string = `${year}-${month}-${day}`
-
-  localStorage.setItem('todayDate', getFormattedDateToday())
 
   return dateString
 }

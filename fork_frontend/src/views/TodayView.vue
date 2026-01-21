@@ -197,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import { getFormattedDate, getFormattedDateToday } from '@/helpers/utils'
 import type { FoodEntry, FoodLog } from '@/types/foodLog'
@@ -232,7 +232,7 @@ const animationDirection = ref<'left' | 'right' | null>(null)
 const props = defineProps({
   date: {
     type: String,
-    default: getFormattedDate(),
+    default: () => getFormattedDate(),
   },
 })
 
@@ -255,6 +255,40 @@ function resetDateToLoad() {
   dateToLoad.value = getFormattedDate(0, getFormattedDateToday())
   localStorage.setItem('dateToLoad', dateToLoad.value)
   loadLogData(dateToLoad.value)
+}
+function checkAutoSetDateToday() {
+  const lastCheck = localStorage.getItem('lastActivityTimestamp')
+  const selectedDate = localStorage.getItem('dateToLoad')
+
+  if (!lastCheck || !selectedDate) {
+    localStorage.setItem('lastActivityTimestamp', Date.now().toString())
+    return
+  }
+
+  if (selectedDate == getFormattedDateToday()) {
+    localStorage.setItem('lastActivityTimestamp', Date.now().toString())
+    return
+  }
+
+  if (isMoreThanFourHoursAgo(lastCheck)) {
+    localStorage.setItem('lastActivityTimestamp', Date.now().toString())
+    localStorage.setItem('dateToLoad', getFormattedDateToday())
+    dateToLoad.value = getFormattedDateToday()
+    disableChartAnimation.value = true
+    loadLogData(dateToLoad.value)
+  }
+  localStorage.setItem('lastActivityTimestamp', Date.now().toString())
+}
+
+function isMoreThanFourHoursAgo(timestampStr: string | null): boolean {
+  if (!timestampStr) return true
+
+  const lastActive = parseInt(timestampStr, 10)
+  const now = Date.now()
+
+  const FOUR_HOURS_IN_MS = 4 * 60 * 60 * 1000
+
+  return now - lastActive > FOUR_HOURS_IN_MS
 }
 
 function refreshFoodEntries() {
@@ -487,7 +521,12 @@ async function addActivityEntries(entries: ActivityEntry[]) {
 
 onMounted(async () => {
   await loadUserData()
+  document.addEventListener('visibilitychange', checkAutoSetDateToday)
   loadLogData(dateToLoad.value)
+})
+
+onUnmounted(async () => {
+  document.removeEventListener('visibilitychange', checkAutoSetDateToday)
 })
 </script>
 
