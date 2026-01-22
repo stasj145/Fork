@@ -3,7 +3,6 @@ export function getFormattedDate(
   referenceDate: string | Date | null = null,
 ): string {
   const storageDate = localStorage.getItem('dateToLoad')
-  localStorage.setItem('lastActivityTimestamp', Date.now().toString())
 
   let date = new Date()
 
