@@ -39,8 +39,14 @@
               <div class="activity-name">{{ activity.name }}</div>
               <div class="activity-summary-details">
                 <span>
-                  {{ (activity.calories_burned_kg_h * user.weight).toFixed(1) }}
-                  kcal per hour (at {{ user.weight }}kg)</span
+                  {{
+                    (
+                      activity.calories_burned_kg_h *
+                      (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
+                    ).toFixed(1)
+                  }}
+                  kcal per hour (at
+                  {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)</span
                 >
               </div>
             </div>

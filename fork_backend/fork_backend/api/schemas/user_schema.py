@@ -1,11 +1,20 @@
 """Pydantic schema for validation of user api."""
 
 from typing import Optional
+from datetime import date
 from pydantic import EmailStr, Field
 
 from fork_backend.api.schemas.base_schema import ForkBaseSchema
 from fork_backend.models.gender import Gender
 from fork_backend.models.activity_levels import ActivityLevels
+
+
+class WeigthHistory(ForkBaseSchema):
+    """WeightHistory props"""
+
+    id: Optional[str] = Field(None , examples=["123e4567-e89b-12d3-a456-426614174000"])
+    weight: float = Field(..., ge=0, examples=[85.4])
+    created_at: date = Field(..., examples=["2025-01-29"])
 
 class GoalsBase(ForkBaseSchema):
     """Goal properties"""
@@ -21,7 +30,8 @@ class UserBase(ForkBaseSchema):
     username: str = Field(..., max_length=255, examples=["johndoe"])
     email: EmailStr = Field(..., max_length=255, examples=["john@example.com"])
     goals: GoalsBase = Field(GoalsBase(), description="the users goals")
-    weight: float = Field(85.4, ge=0, examples=[85.4])
+    weight_history: list[WeigthHistory] = Field([],
+                                    description="All recorded weights with their dates and ids")
     height: float = Field(180.0, ge=0, examples=[180.0])
     age: int = Field(18, ge=0, examples=[18])
     gender: Gender = Field(Gender.MALE, examples=[Gender.MALE, Gender.FEMALE])
