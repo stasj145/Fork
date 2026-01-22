@@ -64,7 +64,7 @@ const handleLogin = async () => {
 
   try {
     await authStore.login(form.value.username, form.value.password)
-    router.push('/home')
+    router.push('/today')
   } catch (err: any) {
     error.value = err.message || 'Login failed'
   } finally {
