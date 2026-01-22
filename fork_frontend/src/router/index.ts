@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import LogView from '../views/LogView.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -15,12 +14,6 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: () => import('../views/RegisterView.vue'),
-    },
-    {
-      path: '/home',
-      name: 'home',
-      component: HomeView,
-      meta: { requiresAuth: true },
     },
     {
       path: '/today',

@@ -2,7 +2,7 @@
   <nav class="navbar-root">
     <div class="nav-items">
       <div class="nav-branding">
-        <RouterLink class="nav-brand" to="/home" @click="collapseNavbarExpansion">Fork</RouterLink>
+        <RouterLink class="nav-brand" to="/today" @click="collapseNavbarExpansion">Fork</RouterLink>
       </div>
       <div v-if="showNavigation" class="nav-menu-items" :class="{ expanded: isExpanded }">
         <router-link
