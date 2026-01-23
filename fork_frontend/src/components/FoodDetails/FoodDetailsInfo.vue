@@ -189,7 +189,7 @@
 
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Food, Ingredient } from '@/types/food'
 import SparkbarChart from '@/components/SparkbarChart.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
@@ -442,6 +442,31 @@ const handleIngredientEditRequest = (ingredientToEdit: Ingredient) => {
 const handleAddIngredient = () => {
   emit('ingredient-add-requested')
 }
+
+// Watch for serving size changes to properly recalculate values
+watch(
+  () => selectedFood.value?.serving_size,
+  (newSize, oldSize) => {
+    if (newSize !== oldSize && newSize !== undefined && newSize > 0) {
+      if (selectedFood.value && !maskTypeAdvanced.value) {
+        if (selectedFood.value.calories_per_serving !== undefined) {
+          selectedFood.value.calories_per_100 =
+            (selectedFood.value.calories_per_serving / newSize) * 100
+        }
+        if (selectedFood.value.protein_per_serving !== undefined) {
+          selectedFood.value.protein_per_100 =
+            (selectedFood.value.protein_per_serving / newSize) * 100
+        }
+        if (selectedFood.value.carbs_per_serving !== undefined) {
+          selectedFood.value.carbs_per_100 = (selectedFood.value.carbs_per_serving / newSize) * 100
+        }
+        if (selectedFood.value.fat_per_serving !== undefined) {
+          selectedFood.value.fat_per_100 = (selectedFood.value.fat_per_serving / newSize) * 100
+        }
+      }
+    }
+  },
+)
 </script>
 
 <style lang="css" scoped>
