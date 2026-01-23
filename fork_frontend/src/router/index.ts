@@ -52,6 +52,10 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
+  if (to.path === '/' && authStore.user) {
+    return next('/today') // Redirect to dashboard instead of showing login
+  }
+
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!authStore.user) {
       next('/')

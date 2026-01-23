@@ -275,7 +275,9 @@ function checkAutoSetDateToday() {
     localStorage.setItem('dateToLoad', getFormattedDateToday())
     dateToLoad.value = getFormattedDateToday()
     disableChartAnimation.value = true
-    loadLogData(dateToLoad.value)
+    if (foodLog.value) {
+      loadLogData(dateToLoad.value)
+    }
   }
   localStorage.setItem('lastActivityTimestamp', Date.now().toString())
 }
@@ -520,6 +522,7 @@ async function addActivityEntries(entries: ActivityEntry[]) {
 }
 
 onMounted(async () => {
+  checkAutoSetDateToday()
   await loadUserData()
   document.addEventListener('visibilitychange', checkAutoSetDateToday)
   loadLogData(dateToLoad.value)
