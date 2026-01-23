@@ -58,6 +58,11 @@ router.beforeEach((to, from, next) => {
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!authStore.user) {
+      // NOTE: Because we only check if a user store exists in the localStorage it is in theory
+      // possible to add a fake "user" entry to localStorage and be able to pass this check, going
+      //  past the login page without actually logging in. HOWEVER i dont really care to fix this
+      // right now, as this does not allow any access to the data because JWT token authentication
+      // fails. So really all it does is allow to see (some) of the ui.
       next('/')
     } else {
       next()
