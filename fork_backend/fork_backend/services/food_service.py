@@ -404,7 +404,8 @@ class FoodService:
                 similarity = 1 - \
                     FoodItem.embedding.cosine_distance(query_embedding)
 
-                stmt = select(FoodItem, similarity.label('similarity')).options(
+                stmt = select(FoodItem, similarity.label('similarity')).where(
+                    FoodItem.hidden == False).options(
                         selectinload(FoodItem.ingredients).selectinload(
                             FoodItemIngredient.ingredient))
 

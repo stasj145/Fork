@@ -58,6 +58,7 @@ class FoodUpdate(ForkBaseSchema):
     """Properties to receive via API on update (all optional)"""
     name: Optional[str] = Field(None, max_length=255, examples=["Apple"])
     private: Optional[bool] = Field(None, examples=[False])
+    hidden: Optional[bool] = Field(None, examples=[False])
     barcode: Optional[str] = Field(
         None, max_length=50, examples=["0123456789123"])
     brand: Optional[str] = Field(None, max_length=255, examples=["Generic"])
@@ -76,6 +77,7 @@ class FoodInDB(FoodBase):
     """Properties stored in DB"""
     id: str = Field(..., examples=["123e4567-e89b-12d3-a456-426614174000"])
     private: bool = Field(..., examples=[False])
+    hidden: bool = Field(..., examples=[False])
     barcode: Optional[str] = Field(
         None, max_length=50, examples=["0123456789123"])
 

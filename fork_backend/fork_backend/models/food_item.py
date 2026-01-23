@@ -18,6 +18,8 @@ class FoodItem(Base):
         ForeignKey("users.id"), nullable=False)
     private: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False)
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     brand: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(
