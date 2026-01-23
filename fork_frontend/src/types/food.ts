@@ -40,6 +40,10 @@ export const createEmptyFood = (): Food => ({
   protein_per_100: 0.0,
   carbs_per_100: 0.0,
   fat_per_100: 0.0,
+  calories_per_serving: 0.0,
+  protein_per_serving: 0.0,
+  carbs_per_serving: 0.0,
+  fat_per_serving: 0.0,
   ingredients: [],
 })
 

@@ -243,145 +243,78 @@ const maskTypeAdvanced = computed(() => {
   return selectedMaskType.value == 'Advanced'
 })
 
+// Helper function to create nutrient computed properties
+function createNutrientComputed(nutrient: 'calories' | 'protein' | 'carbs' | 'fat') {
+  const perServingKey = `${nutrient}_per_serving` as keyof Food
+  const per100Key = `${nutrient}_per_100` as keyof Food
+
+  return computed({
+    get: () => {
+      if (!selectedFood.value) return 0
+      if (selectedFood.value[perServingKey]) {
+        console.log('Exists')
+        return selectedFood.value[perServingKey]
+      }
+      if (selectedFood.value) {
+        console.log('recalculating')
+        if (
+          selectedFood.value.serving_size &&
+          selectedFood.value.serving_size > 0 &&
+          selectedFood.value[per100Key]
+        ) {
+          const per100Value = selectedFood.value[per100Key]
+          const servingSize = selectedFood.value.serving_size
+          if (per100Value !== undefined && servingSize !== undefined) {
+            ;(selectedFood.value[perServingKey] as number) =
+              (<number>per100Value / 100) * servingSize
+            return selectedFood.value[perServingKey]
+          }
+        }
+      }
+      return 0
+    },
+    set: (value) => {
+      if (selectedFood.value && value !== undefined) {
+        ;(selectedFood.value[perServingKey] as number) = <number>value
+        if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+          ;(selectedFood.value[per100Key] as number) =
+            (<number>value / selectedFood.value.serving_size) * 100
+        }
+      }
+    },
+  })
+}
+
+// Helper function to create nutrient computed properties for the reverse direction
+function createNutrientComputedReverse(nutrient: 'calories' | 'protein' | 'carbs' | 'fat') {
+  const perServingKey = `${nutrient}_per_serving` as keyof Food
+  const per100Key = `${nutrient}_per_100` as keyof Food
+
+  return computed({
+    get: () => selectedFood.value?.[per100Key],
+    set: (value) => {
+      if (selectedFood.value && value !== undefined) {
+        ;(selectedFood.value[per100Key] as number) = <number>value
+        if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+          ;(selectedFood.value[perServingKey] as number) =
+            (<number>value / 100) * selectedFood.value.serving_size
+        }
+      }
+    },
+  })
+}
+
 // Computed properties to automatically calculate missing values
-const caloriesPerServing = computed({
-  get: () => {
-    if (selectedFood.value?.calories_per_serving) {
-      return selectedFood.value?.calories_per_serving
-    }
-    if (selectedFood.value) {
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        return (selectedFood.value.calories_per_100 / 100) * selectedFood.value.serving_size
-      }
-    }
-    return 0
-  },
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.calories_per_serving = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.calories_per_100 = (value / selectedFood.value.serving_size) * 100
-      }
-    }
-  },
-})
-
-const proteinPerServing = computed({
-  get: () => {
-    if (selectedFood.value?.protein_per_serving) {
-      return selectedFood.value?.protein_per_serving
-    }
-    if (selectedFood.value) {
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        return (selectedFood.value.protein_per_100 / 100) * selectedFood.value.serving_size
-      }
-    }
-    return 0
-  },
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.protein_per_serving = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.protein_per_100 = (value / selectedFood.value.serving_size) * 100
-      }
-    }
-  },
-})
-
-const carbsPerServing = computed({
-  get: () => {
-    if (selectedFood.value?.carbs_per_serving) {
-      return selectedFood.value?.carbs_per_serving
-    }
-    if (selectedFood.value) {
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        return (selectedFood.value.carbs_per_100 / 100) * selectedFood.value.serving_size
-      }
-    }
-    return 0
-  },
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.carbs_per_serving = value
-      // If serving_size is defined, calculate per_100
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.carbs_per_100 = (value / selectedFood.value.serving_size) * 100
-      }
-    }
-  },
-})
-
-const fatPerServing = computed({
-  get: () => {
-    if (selectedFood.value?.fat_per_serving) {
-      return selectedFood.value?.fat_per_serving
-    }
-    if (selectedFood.value) {
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        return (selectedFood.value.fat_per_100 / 100) * selectedFood.value.serving_size
-      }
-    }
-    return 0
-  },
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.fat_per_serving = value
-      // If serving_size is defined, calculate per_100
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.fat_per_100 = (value / selectedFood.value.serving_size) * 100
-      }
-    }
-  },
-})
+const caloriesPerServing = createNutrientComputed('calories')
+const proteinPerServing = createNutrientComputed('protein')
+const carbsPerServing = createNutrientComputed('carbs')
+const fatPerServing = createNutrientComputed('fat')
 
 // Computed properties to automatically calculate per_serving when per_100 is provided
-const caloriesPer100 = computed({
-  get: () => selectedFood.value?.calories_per_100,
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.calories_per_100 = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.calories_per_serving = (value / 100) * selectedFood.value.serving_size
-      }
-    }
-  },
-})
-
-const proteinPer100 = computed({
-  get: () => selectedFood.value?.protein_per_100,
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.protein_per_100 = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.protein_per_serving = (value / 100) * selectedFood.value.serving_size
-      }
-    }
-  },
-})
-
-const carbsPer100 = computed({
-  get: () => selectedFood.value?.carbs_per_100,
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.carbs_per_100 = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.carbs_per_serving = (value / 100) * selectedFood.value.serving_size
-      }
-    }
-  },
-})
-
-const fatPer100 = computed({
-  get: () => selectedFood.value?.fat_per_100,
-  set: (value) => {
-    if (selectedFood.value && value !== undefined) {
-      selectedFood.value.fat_per_100 = value
-      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
-        selectedFood.value.fat_per_serving = (value / 100) * selectedFood.value.serving_size
-      }
-    }
-  },
-})
+const caloriesPer100 = createNutrientComputedReverse('calories')
+const proteinPer100 = createNutrientComputedReverse('protein')
+const carbsPer100 = createNutrientComputedReverse('carbs')
+const fatPer100 = createNutrientComputedReverse('fat')
 
 const totalWeight = computed(() => {
   if (!selectedFood.value) return 0
@@ -457,8 +390,8 @@ const handleAddIngredient = () => {
 watch(
   () => selectedFood.value?.serving_size,
   (newSize, oldSize) => {
-    if (newSize !== oldSize && newSize !== undefined && newSize > 0) {
-      if (selectedFood.value && !maskTypeAdvanced.value) {
+    if (newSize !== oldSize && newSize !== undefined && newSize > 0 && selectedFood.value) {
+      if (!maskTypeAdvanced.value) {
         if (selectedFood.value.calories_per_serving !== undefined) {
           selectedFood.value.calories_per_100 =
             (selectedFood.value.calories_per_serving / newSize) * 100
