@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   fork_postgres:
@@ -19,7 +19,7 @@ services:
     restart: unless-stopped
 
   fork_backend:
-    image: ghcr.io/stasj145/fork-backend
+    image: ghcr.io/stasj145/fork-backend:latest
     environment:
       - FORK_BACKEND_ADMIN_USERNAME=admin
       - FORK_BACKEND_ADMIN_EMAIL=fork-admin@example.com
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
 
   fork_frontend:
-    image: ghcr.io/stasj145/fork-frontend
+    image: ghcr.io/stasj145/fork-frontend:latest
     ports:
       - 8080:80
     networks:
