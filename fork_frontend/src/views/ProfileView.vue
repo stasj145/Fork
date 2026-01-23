@@ -448,7 +448,9 @@ const saveWeightHistory = async (updatedHistory: WeightHistory[]) => {
 
 .user-info-item-with-icon .icon {
   align-self: start;
+  flex-shrink: 0;
   height: 2rem;
+  width: 2rem;
   margin-top: 0.75rem;
   margin-right: 0.25rem;
 }
