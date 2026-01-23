@@ -1,39 +1,64 @@
 <!-- eslint-disable vue/no-mutating-props  -->
 <template>
   <div class="food-details-info-root" v-if="selectedFood">
+    <div class="segmented-control" v-if="isEditingMode">
+      <SegmentedControl
+        :options="['Advanced', 'Basic']"
+        v-model="selectedMaskType"
+      ></SegmentedControl>
+    </div>
     <div class="food-info">
       <div class="food-info-item">
         <label>Name</label>
         <input v-model="selectedFood.name" :disabled="!isEditingMode" />
       </div>
-      <div class="food-info-item">
+      <div class="food-info-item" v-if="maskTypeAdvanced">
         <label>Description</label>
         <textarea v-model="selectedFood.description" v-auto-resize :disabled="!isEditingMode" />
       </div>
-      <div class="food-info-item">
+      <div class="food-info-item" v-if="maskTypeAdvanced">
         <label>Brand</label>
         <input v-model="selectedFood.brand" :disabled="!isEditingMode" />
       </div>
     </div>
     <div class="food-nutrition">
-      <div v-if="isEditingMode" class="food-nutrition-editing-fields">
+      <div v-if="isEditingMode && maskTypeAdvanced" class="food-nutrition-editing-fields">
         <div class="food-nutrition-item">
           <label>Calories/100g</label>
-          <input type="number" min="0" max="100" v-model="selectedFood.calories_per_100" />
+          <input type="number" min="0" max="100" v-model.number="caloriesPer100" />
         </div>
         <div class="food-nutrition-item">
           <label>Protein/100g</label>
-          <input type="number" min="0" max="100" v-model="selectedFood.protein_per_100" />
+          <input type="number" min="0" max="100" v-model.number="proteinPer100" />
         </div>
         <div class="food-nutrition-item">
           <label>Carbs/100g</label>
-          <input type="number" min="0" max="100" v-model="selectedFood.carbs_per_100" />
+          <input type="number" min="0" max="100" v-model.number="carbsPer100" />
         </div>
         <div class="food-nutrition-item">
           <label>Fat/100g</label>
-          <input type="number" min="0" max="100" v-model="selectedFood.fat_per_100" />
+          <input type="number" min="0" max="100" v-model.number="fatPer100" />
         </div>
       </div>
+      <div v-if="isEditingMode && !maskTypeAdvanced" class="food-nutrition-editing-fields">
+        <div class="food-nutrition-item">
+          <label>Total Calories</label>
+          <input type="number" min="0" max="100" v-model.number="caloriesPerServing" />
+        </div>
+        <div class="food-nutrition-item">
+          <label>Total Protein</label>
+          <input type="number" min="0" max="100" v-model.number="proteinPerServing" />
+        </div>
+        <div class="food-nutrition-item">
+          <label>Total Carbs</label>
+          <input type="number" min="0" max="100" v-model.number="carbsPerServing" />
+        </div>
+        <div class="food-nutrition-item">
+          <label>Total Fat</label>
+          <input type="number" min="0" max="100" v-model.number="fatPerServing" />
+        </div>
+      </div>
+
       <div v-if="!isEditingMode" class="food-nutrition-display">
         <div class="gauge-chart">
           <GaugeChart
@@ -86,21 +111,25 @@
     <div class="food-properties-info">
       <div class="food-serving-size-info">
         <div class="food-info-item">
-          <label>Serving size in g</label>
+          <label v-if="maskTypeAdvanced">Serving size in g</label>
+          <label v-else>Amount in g</label>
           <input
             v-model="selectedFood.serving_size"
             type="number"
-            min="0"
+            min="1"
             max="100"
             :disabled="!isEditingMode"
           />
         </div>
-        <div class="food-info-item">
+        <div class="food-info-item" v-if="maskTypeAdvanced">
           <label>Serving size unit</label>
           <input v-model="selectedFood.serving_unit" :disabled="!isEditingMode" />
         </div>
       </div>
-      <div class="food-info-item barcode-container" v-if="selectedFood.barcode || isEditingMode">
+      <div
+        class="food-info-item barcode-container"
+        v-if="(selectedFood.barcode || isEditingMode) && maskTypeAdvanced"
+      >
         <label>Barcode</label>
         <input v-model="selectedFood.barcode" :disabled="!isEditingMode" />
       </div>
@@ -113,7 +142,10 @@
         ></ToggleSwitch>
       </div>
     </div>
-    <div class="food-ingredients-info" v-if="isEditingMode || selectedFood.ingredients.length > 0">
+    <div
+      class="food-ingredients-info"
+      v-if="(isEditingMode || selectedFood.ingredients.length > 0) && maskTypeAdvanced"
+    >
       <label class="food-ingredients-label">Ingredients</label>
       <div class="ingredients-summary" v-if="selectedFood.ingredients.length > 0">
         <div class="summary-row">
@@ -157,13 +189,16 @@
 
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Food, Ingredient } from '@/types/food'
 import SparkbarChart from '@/components/SparkbarChart.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
 import ToggleSwitch from '../ToggleSwitch.vue'
 import IconAdd from '../icons/IconAdd.vue'
 import FoodItemSummary from '../FoodItemSummary.vue'
+import SegmentedControl from '../SegmentedControl.vue'
+
+const selectedMaskType = ref<string>('Advanced')
 
 const selectedFood = defineModel<Food | null>('selectedFood')
 
@@ -193,6 +228,150 @@ const vAutoResize = {
     resize() // Initial resize
   },
 }
+
+const maskTypeAdvanced = computed(() => {
+  return selectedMaskType.value == 'Advanced'
+})
+
+// Computed properties to automatically calculate missing values
+const caloriesPerServing = computed({
+  get: () => {
+    if (selectedFood.value?.calories_per_serving) {
+      return selectedFood.value?.calories_per_serving
+    }
+    if (selectedFood.value) {
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        return (selectedFood.value.calories_per_100 / 100) * selectedFood.value.serving_size
+      }
+    }
+    return 0
+  },
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.calories_per_serving = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.calories_per_100 = (value / selectedFood.value.serving_size) * 100
+      }
+    }
+  },
+})
+
+const proteinPerServing = computed({
+  get: () => {
+    if (selectedFood.value?.protein_per_serving) {
+      return selectedFood.value?.protein_per_serving
+    }
+    if (selectedFood.value) {
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        return (selectedFood.value.protein_per_100 / 100) * selectedFood.value.serving_size
+      }
+    }
+    return 0
+  },
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.protein_per_serving = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.protein_per_100 = (value / selectedFood.value.serving_size) * 100
+      }
+    }
+  },
+})
+
+const carbsPerServing = computed({
+  get: () => {
+    if (selectedFood.value?.carbs_per_serving) {
+      return selectedFood.value?.carbs_per_serving
+    }
+    if (selectedFood.value) {
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        return (selectedFood.value.carbs_per_100 / 100) * selectedFood.value.serving_size
+      }
+    }
+    return 0
+  },
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.carbs_per_serving = value
+      // If serving_size is defined, calculate per_100
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.carbs_per_100 = (value / selectedFood.value.serving_size) * 100
+      }
+    }
+  },
+})
+
+const fatPerServing = computed({
+  get: () => {
+    if (selectedFood.value?.fat_per_serving) {
+      return selectedFood.value?.fat_per_serving
+    }
+    if (selectedFood.value) {
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        return (selectedFood.value.fat_per_100 / 100) * selectedFood.value.serving_size
+      }
+    }
+    return 0
+  },
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.fat_per_serving = value
+      // If serving_size is defined, calculate per_100
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.fat_per_100 = (value / selectedFood.value.serving_size) * 100
+      }
+    }
+  },
+})
+
+// Computed properties to automatically calculate per_serving when per_100 is provided
+const caloriesPer100 = computed({
+  get: () => selectedFood.value?.calories_per_100,
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.calories_per_100 = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.calories_per_serving = (value / 100) * selectedFood.value.serving_size
+      }
+    }
+  },
+})
+
+const proteinPer100 = computed({
+  get: () => selectedFood.value?.protein_per_100,
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.protein_per_100 = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.protein_per_serving = (value / 100) * selectedFood.value.serving_size
+      }
+    }
+  },
+})
+
+const carbsPer100 = computed({
+  get: () => selectedFood.value?.carbs_per_100,
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.carbs_per_100 = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.carbs_per_serving = (value / 100) * selectedFood.value.serving_size
+      }
+    }
+  },
+})
+
+const fatPer100 = computed({
+  get: () => selectedFood.value?.fat_per_100,
+  set: (value) => {
+    if (selectedFood.value && value !== undefined) {
+      selectedFood.value.fat_per_100 = value
+      if (selectedFood.value.serving_size && selectedFood.value.serving_size > 0) {
+        selectedFood.value.fat_per_serving = (value / 100) * selectedFood.value.serving_size
+      }
+    }
+  },
+})
 
 const totalWeight = computed(() => {
   if (!selectedFood.value) return 0
@@ -279,6 +458,12 @@ const handleAddIngredient = () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
   padding-bottom: 5rem; /* padding for bottom buttons*/
+}
+
+.segmented-control {
+  width: 100%;
+  height: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .food-info {
@@ -408,17 +593,18 @@ textarea:focus {
 .food-serving-size-info {
   display: flex;
   flex-direction: row;
-  align-items: end;
+  align-items: start;
+  gap: 0.25rem;
   width: 100%;
   height: 100%;
 }
 
 .food-serving-size-info .food-info-item {
-  width: 50%;
+  width: 100%;
 }
 
-.food-serving-size-info .food-info-item:first-child {
-  margin-right: 0.25rem;
+.food-serving-size-info .food-info-item:nth-child(2) {
+  width: 50%;
 }
 
 .barcode-container {

@@ -18,6 +18,11 @@ export interface Food {
   protein_per_100: number
   carbs_per_100: number
   fat_per_100: number
+  calories_per_serving?: number
+  protein_per_serving?: number
+  carbs_per_serving?: number
+  fat_per_serving?: number
+
   ingredients: Ingredient[]
 }
 
@@ -27,7 +32,7 @@ export const createEmptyFood = (): Food => ({
   private: true,
   barcode: null,
   description: '',
-  serving_size: 0.0,
+  serving_size: 1.0,
   serving_unit: 'serving',
   calories_per_100: 0.0,
   protein_per_100: 0.0,
