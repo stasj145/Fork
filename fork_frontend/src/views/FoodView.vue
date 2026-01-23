@@ -46,7 +46,7 @@
             >
               <div class="food-name">{{ food.name }}</div>
               <div class="food-summary-details">
-                <span>Calories: {{ food.calories_per_100 }}/100g</span>
+                <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
               </div>
             </div>
           </div>

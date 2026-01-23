@@ -11,6 +11,7 @@ export interface Food {
   brand: string
   barcode: string | null
   private: boolean
+  hidden: boolean
   description: string
   serving_size: number
   serving_unit: string
@@ -30,6 +31,7 @@ export const createEmptyFood = (): Food => ({
   name: '',
   brand: 'Generic',
   private: true,
+  hidden: false,
   barcode: null,
   description: '',
   serving_size: 1.0,

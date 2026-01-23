@@ -133,13 +133,23 @@
         <label>Barcode</label>
         <input v-model="selectedFood.barcode" :disabled="!isEditingMode" />
       </div>
-      <div class="toggle-private-container">
-        <label class="toggle-private-label">Private</label>
-        <ToggleSwitch
-          class="toggle-private"
-          v-model:state="selectedFood.private"
-          :disabled="!isEditingMode"
-        ></ToggleSwitch>
+      <div class="toggle-container">
+        <div class="toggle-private-container">
+          <label class="toggle-private-label">Private</label>
+          <ToggleSwitch
+            class="toggle-private"
+            v-model:state="selectedFood.private"
+            :disabled="!isEditingMode"
+          ></ToggleSwitch>
+        </div>
+        <div class="toggle-hidden-container">
+          <label class="toggle-hidden-label">Hide from search</label>
+          <ToggleSwitch
+            class="toggle-hidden"
+            v-model:state="selectedFood.hidden"
+            :disabled="!isEditingMode"
+          ></ToggleSwitch>
+        </div>
       </div>
     </div>
     <div
@@ -636,13 +646,23 @@ textarea:focus {
   width: 100%;
 }
 
-.toggle-private-container {
+.toggle-container {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: start;
+}
+
+.toggle-private-container,
+.toggle-hidden-container {
+  width: 50%;
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 
-.toggle-private-label {
+.toggle-private-label,
+.toggle-hidden-label {
   color: var(--color-text-primary);
   font-size: 1rem;
   font-weight: bold;
