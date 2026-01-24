@@ -399,7 +399,7 @@ const config = computed(() => {
       labels: {
         show: true,
         offsetY: -16,
-        rounding: 0,
+        rounding: 1,
         color: '#1A1A1Aff',
         formatter: null,
       },
