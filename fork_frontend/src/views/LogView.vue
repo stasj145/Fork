@@ -4,7 +4,11 @@
       <div class="weight-info-container">
         <span class="weight-heading">Weight (last 30 entries)</span>
         <div class="weight-chart">
-          <XYChart :dataset="weightDataset" :x-axis-values="weightXAxisLabels"></XYChart>
+          <XYChart
+            :dataset="weightDataset"
+            :x-axis-values="weightXAxisLabels"
+            :y-min="weightYMin"
+          ></XYChart>
         </div>
       </div>
     </div>
@@ -30,6 +34,8 @@ const loading = ref<boolean>(true)
 const showLoadingError = ref(false)
 const errorDetails = ref('')
 
+const weightYMin = ref<number>(0)
+
 const weightDataset = computed(() => {
   const seriesData = user.value
     ? user.value.weight_history
@@ -37,6 +43,9 @@ const weightDataset = computed(() => {
         .reverse()
         .slice(-30, user.value.weight_history.length)
     : []
+  // eslint-disable-next-line
+  weightYMin.value = Math.floor((Math.round(Math.min(...seriesData)) + 1) / 10) * 10
+
   return <VueUiXyDatasetItem[]>[
     {
       name: 'Weight',

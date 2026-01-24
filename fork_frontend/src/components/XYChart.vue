@@ -190,7 +190,7 @@ const config = computed(() => {
             gap: 12,
             labelWidth: 40,
             formatter: null,
-            scaleMin: null,
+            scaleMin: props.yMin,
             scaleMax: null,
             groupColor: '#1A1A1A',
             scaleLabelOffsetX: 0,
@@ -503,6 +503,10 @@ const props = defineProps({
     default: () => {
       return <string[]>[]
     },
+  },
+  yMin: {
+    type: Number,
+    default: 0,
   },
 })
 </script>
