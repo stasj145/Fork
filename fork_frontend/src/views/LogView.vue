@@ -1,6 +1,6 @@
 <template>
   <div class="log-view-root">
-    <div class="log-view-content-root" v-if="!loading">
+    <div class="log-view-content-root" v-if="!loading && user">
       <div class="weight-info-container">
         <span class="weight-heading">Weight</span>
         <SegmentedControl
@@ -8,6 +8,52 @@
           :options="Object.keys(weightChartSelectorLookup)"
           v-model="weightChartSelector"
         ></SegmentedControl>
+        <div class="weight-kpis">
+          <div class="weight-kpis-first-row">
+            <div class="weight-kpi">
+              <KpiBox
+                :title="'Starting weight'"
+                :value="startingWeight.toFixed(1) + ' kg'"
+              ></KpiBox>
+            </div>
+            <div class="weight-kpi">
+              <KpiBox :title="'Current weight'" :value="user.weight.toFixed(1) + ' kg'"></KpiBox>
+            </div>
+          </div>
+          <div class="weight-kpis-second-row">
+            <div class="weight-kpi">
+              <KpiBox
+                :title="'Weight change %'"
+                :value="((user.weight / startingWeight) * 100 - 100).toFixed(1) + '%'"
+              ></KpiBox>
+            </div>
+            <div class="weight-kpi">
+              <KpiBox
+                :title="'Weight change kg'"
+                :value="(user.weight - startingWeight).toFixed(1) + ' kg'"
+              ></KpiBox>
+            </div>
+          </div>
+          <div class="weight-kpis-third-row">
+            <div class="weight-kpi">
+              <KpiBox
+                :title="'Avg change/day '"
+                :value="
+                  ((user.weight - startingWeight) / weightXAxisLabels.length).toFixed(1) + ' kg'
+                "
+              ></KpiBox>
+            </div>
+            <div class="weight-kpi">
+              <KpiBox
+                :title="'Avg change/week'"
+                :value="
+                  (((user.weight - startingWeight) / weightXAxisLabels.length) * 7).toFixed(1) +
+                  ' kg'
+                "
+              ></KpiBox>
+            </div>
+          </div>
+        </div>
         <div class="weight-chart">
           <XYChart
             :dataset="weightDataset"
@@ -29,6 +75,7 @@
 
 <script setup lang="ts">
 import ErrorModal from '@/components/ErrorModal.vue'
+import KpiBox from '@/components/KpiBox.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import XYChart from '@/components/XYChart.vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
@@ -52,16 +99,27 @@ const weightChartSelectorLookup: { [id: string]: number } = {
 }
 
 const weightYMin = ref<number>(0)
+const startingWeight = ref<number>(0)
 
 const weightDataset = computed(() => {
-  const seriesData = user.value
-    ? weightHistory
-        .map((x) => x.weight)
-        .reverse()
-        .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
-    : []
+  if (!user.value || !user.value.weight_history) {
+    return []
+  }
+  const seriesData = weightHistory
+    .map((x) => x.weight)
+    .reverse()
+    .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
+
   // eslint-disable-next-line
   weightYMin.value = Math.floor((Math.round(Math.min(...(<number[]>seriesData))) + 1) / 10) * 10
+
+  for (const weight of seriesData) {
+    if (weight) {
+      // eslint-disable-next-line
+      startingWeight.value = weight
+      break
+    }
+  }
 
   return <VueUiXyDatasetItem[]>[
     {
@@ -143,10 +201,8 @@ function fillGaps(weights: WeightHistory[]): LocalWeightHistory[] {
     const prevDate = new Date(prev.created_at)
     const currDate = new Date(curr.created_at)
 
-    // Calculate the difference in days between previous and current dates
     const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
 
-    // Process missing dates between prev and curr if there's a gap > 1 day
     if (daysDiff > 1) {
       const currentDate = new Date(prevDate)
       currentDate.setDate(prevDate.getDate() - 1)
@@ -218,6 +274,32 @@ onMounted(async () => {
   z-index: 10;
   font-size: 2rem;
 }
+
+.weight-kpis {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.weight-kpis-first-row,
+.weight-kpis-second-row,
+.weight-kpis-third-row {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.weight-kpi {
+  height: 5rem;
+  width: 100%;
+}
+
 .weight-chart {
   width: 100%;
 }
@@ -238,6 +320,14 @@ onMounted(async () => {
   .weight-heading {
     font-size: 1rem;
     bottom: 1.25rem;
+  }
+
+  .weight-kpis {
+    flex-direction: column;
+  }
+
+  .weight-kpi {
+    height: 3.5rem;
   }
 
   .weight-segmented-control div button {
