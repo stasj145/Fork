@@ -163,7 +163,7 @@ const config = computed(() => {
           color: '#1A1A1Aff',
           fontSize: 16,
           axis: {
-            yLabel: 'Weight in kg',
+            yLabel: props.yLable,
             yLabelOffsetX: 0,
             xLabel: '',
             xLabelOffsetY: 0,
@@ -507,6 +507,10 @@ const props = defineProps({
   yMin: {
     type: Number,
     default: 0,
+  },
+  yLable: {
+    type: String,
+    default: '',
   },
   minimalLabels: {
     type: Boolean,

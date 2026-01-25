@@ -431,8 +431,6 @@ class FoodService:
 
                 stmt = stmt.order_by(similarity.desc()).limit(limit)
 
-                stmt = stmt
-
                 result = await db.execute(stmt)
                 rows = result.all()
                 print(rows)

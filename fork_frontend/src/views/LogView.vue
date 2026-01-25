@@ -1,14 +1,19 @@
 <template>
   <div class="log-view-root">
+    <div class="profile-loading-spinner" v-if="loading">
+      <Spinner></Spinner>
+    </div>
     <div class="log-view-content-root" v-if="!loading && user">
-      <div class="weight-info-container">
-        <span class="weight-heading">Weight</span>
-        <SegmentedControl
-          class="weight-segmented-control"
-          :options="Object.keys(weightChartSelectorLookup)"
-          v-model="weightChartSelector"
-        ></SegmentedControl>
-        <div class="weight-kpis">
+      <div class="info-container weight">
+        <span class="info-container-heading weight">Weight</span>
+        <div class="segmented-control">
+          <SegmentedControl
+            class="segmented-control weight"
+            :options="Object.keys(dateRangeChartSelectorLookup)"
+            v-model="dateRangeChartSelector"
+          ></SegmentedControl>
+        </div>
+        <div class="kpis weight">
           <div class="weight-kpis-first-row">
             <div class="weight-kpi">
               <KpiBox
@@ -59,7 +64,34 @@
             :dataset="weightDataset"
             :x-axis-values="weightXAxisLabels"
             :y-min="weightYMin"
-            :minimal-labels="weightChartSelector != '30d' && weightChartSelector != '14d'"
+            :y-lable="'Weight in kg'"
+            :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
+          ></XYChart>
+        </div>
+      </div>
+      <div class="info-container calories">
+        <span class="info-container-heading calories">Calories</span>
+        <div class="segmented-control">
+          <SegmentedControl
+            class="segmented-control calories"
+            :options="Object.keys(dateRangeChartSelectorLookup)"
+            v-model="dateRangeChartSelector"
+          ></SegmentedControl>
+        </div>
+        <div class="kpis calories">
+          <div class="calories-kpis-first-row"></div>
+
+          <div class="calories-kpis-second-row"></div>
+
+          <div class="calories-kpis-third-row"></div>
+        </div>
+        <div class="calorie-chart" v-if="foodLogXAxisLabels.length > 0">
+          <XYChart
+            :dataset="calorieDataset"
+            :x-axis-values="foodLogXAxisLabels"
+            :y-min="calorieYMin"
+            :y-lable="'Kcal'"
+            :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
           ></XYChart>
         </div>
       </div>
@@ -67,7 +99,7 @@
     <ErrorModal
       v-model="showLoadingError"
       title="Loading Error"
-      message="Unable to load user data"
+      message="Unable to load data"
       :details="errorDetails"
     ></ErrorModal>
   </div>
@@ -77,26 +109,32 @@
 import ErrorModal from '@/components/ErrorModal.vue'
 import KpiBox from '@/components/KpiBox.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
+import Spinner from '@/components/Spinner.vue'
 import XYChart from '@/components/XYChart.vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
+import { type FoodLog } from '@/types/foodLog'
 import type { User, WeightHistory } from '@/types/user'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { type VueUiXyDatasetItem } from 'vue-data-ui'
 
 let weightHistory: LocalWeightHistory[] = []
+let foodLogHistory: LocalFoodLogHistory[] = []
 
 const user = ref<User | null>(null)
 const loading = ref<boolean>(true)
 const showLoadingError = ref(false)
 const errorDetails = ref('')
-const weightChartSelector = ref<string>('30d')
-const weightChartSelectorLookup: { [id: string]: number } = {
+const calorieDataset = ref<VueUiXyDatasetItem[]>([])
+const foodLogXAxisLabels = ref<string[]>([])
+const dateRangeChartSelector = ref<string>('30d')
+const dateRangeChartSelectorLookup: { [id: string]: number } = {
   '14d': -14,
   '30d': -30,
   '90d': -90,
   '365d': -365,
   full: 0,
 }
+const calorieYMin = ref<number>(0)
 
 const weightYMin = ref<number>(0)
 const startingWeight = ref<number>(0)
@@ -108,7 +146,7 @@ const weightDataset = computed(() => {
   const seriesData = weightHistory
     .map((x) => x.weight)
     .reverse()
-    .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
+    .slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], weightHistory.length)
 
   // eslint-disable-next-line
   weightYMin.value = Math.floor((Math.round(Math.min(...(<number[]>seriesData))) + 1) / 10) * 10
@@ -143,11 +181,44 @@ const weightXAxisLabels = computed(() => {
     ? weightHistory
         .map((x) => x.created_at)
         .reverse()
-        .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
+        .slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], weightHistory.length)
     : []
 
   return xAxisData
 })
+
+watch(dateRangeChartSelector, async () => {
+  await loadLogData()
+})
+
+const getCalorieDataset = () => {
+  if (!user.value) {
+    return []
+  }
+  const seriesData = foodLogHistory.map((x) => x.calories).reverse()
+
+  return <VueUiXyDatasetItem[]>[
+    {
+      name: 'Calories',
+      series: seriesData,
+      color: '#baff79ff',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: false,
+      useTag: 'none',
+    },
+  ]
+}
+
+const getFoodLogXAxisLabels = () => {
+  const xAxisData = foodLogHistory ? foodLogHistory.map((x) => x.date).reverse() : []
+
+  return xAxisData
+}
 
 const loadUserData = async () => {
   try {
@@ -171,6 +242,26 @@ const loadUserData = async () => {
     }
   } finally {
     loading.value = false
+  }
+}
+
+const loadLogData = async () => {
+  try {
+    const foodLogList = await fetchWrapper.get(
+      `/api/v1/log/last/food?n_logs=${<number>dateRangeChartSelectorLookup[dateRangeChartSelector.value] * -1}`,
+    )
+    if (foodLogList) {
+      foodLogHistory = await prepFoodLogsData(foodLogList)
+    }
+
+    calorieDataset.value = getCalorieDataset()
+    foodLogXAxisLabels.value = getFoodLogXAxisLabels()
+  } catch (err) {
+    console.error('Error loading users log data:', err)
+    if (err instanceof Error) {
+      showLoadingError.value = true
+      errorDetails.value = err.message || err.toString() || 'Unknown error'
+    }
   }
 }
 
@@ -224,8 +315,97 @@ function fillGaps(weights: WeightHistory[]): LocalWeightHistory[] {
   return result
 }
 
+interface LocalFoodLogHistory {
+  id?: string
+  date: string
+
+  calories: number | null
+  protein: number | null
+  fat: number | null
+  carbs: number | null
+
+  goalCalories: number | null
+  goalProtein: number | null
+  goalFat: number | null
+  goalCarbs: number | null
+}
+
+async function prepFoodLogsData(foodLogs: FoodLog[]): Promise<LocalFoodLogHistory[]> {
+  if (!foodLogs[0]) {
+    return []
+  }
+
+  const result: LocalFoodLogHistory[] = [await createLocalFoodLogHistoryFromFoodLog(foodLogs[0])]
+
+  for (let i = 1; i < foodLogs.length; i++) {
+    const prev = result[result.length - 1]!
+    const curr = foodLogs[i]!
+
+    const prevDate = new Date(prev.date)
+    const currDate = new Date(curr.date)
+
+    const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
+
+    if (daysDiff > 1) {
+      const currentDate = new Date(prevDate)
+      currentDate.setDate(prevDate.getDate() - 1)
+
+      while (currentDate > currDate) {
+        result.push(<LocalFoodLogHistory>{
+          id: undefined,
+          date: formatDate(currentDate),
+          calories: null,
+          protein: null,
+          fat: null,
+          carbs: null,
+          goalCalories: null,
+          goalProtein: null,
+          goalCarbs: null,
+          goalFat: null,
+        })
+
+        currentDate.setDate(currentDate.getDate() - 1)
+      }
+    }
+
+    result.push(await createLocalFoodLogHistoryFromFoodLog(curr))
+  }
+
+  return result
+}
+
+async function createLocalFoodLogHistoryFromFoodLog(
+  foodLog: FoodLog,
+): Promise<LocalFoodLogHistory> {
+  let totalCalories: number = 0
+  let totalProtein: number = 0
+  let totalFat: number = 0
+  let totalCarbs: number = 0
+
+  for (const entry of foodLog.food_entries) {
+    totalCalories += (entry.food_item.calories_per_100 / 100) * entry.quantity
+    totalProtein += (entry.food_item.protein_per_100 / 100) * entry.quantity
+    totalFat += (entry.food_item.fat_per_100 / 100) * entry.quantity
+    totalCarbs += (entry.food_item.fat_per_100 / 100) * entry.quantity
+  }
+
+  return <LocalFoodLogHistory>{
+    id: foodLog.id,
+    date: foodLog.date,
+    calories: totalCalories,
+    protein: totalProtein,
+    fat: totalFat,
+    carbs: totalCarbs,
+    goalCalories: foodLog.goals.daily_calorie_target,
+    goalProtein: foodLog.goals.daily_protein_target,
+    goalCarbs: foodLog.goals.daily_carbs_target,
+    goalFat: foodLog.goals.daily_fat_target,
+  }
+}
+
 onMounted(async () => {
   loadUserData()
+  loadLogData()
 })
 </script>
 
@@ -240,11 +420,17 @@ onMounted(async () => {
   padding: 1rem;
 }
 
+.profile-loading-spinner {
+  width: 5rem;
+  height: 5rem;
+}
+
 .log-view-content-root {
   display: flex;
   flex-direction: column;
   justify-content: start;
   align-items: center;
+  gap: 0.5rem;
   width: calc(var(--main-content-width) - 1rem);
   max-width: 1200px;
   min-height: calc(var(--main-content-height) - 2rem);
@@ -254,7 +440,7 @@ onMounted(async () => {
   padding: 0.5rem;
 }
 
-.weight-info-container {
+.info-container {
   width: 100%;
   height: fit-content;
   border: 1px solid var(--color-accent-secondary);
@@ -262,7 +448,7 @@ onMounted(async () => {
   border-radius: 0.5rem;
   margin-top: 1.5rem;
 }
-.weight-heading {
+.info-container-heading {
   color: var(--color-text-heading);
   background-color: var(--color-background-secondary);
   font-weight: bold;
@@ -275,7 +461,12 @@ onMounted(async () => {
   font-size: 2rem;
 }
 
-.weight-kpis {
+.segmented-control {
+  width: 100%;
+  margin-top: -1rem;
+}
+
+.kpis {
   margin-top: 1rem;
   margin-bottom: 1rem;
   width: 100%;
@@ -313,25 +504,21 @@ onMounted(async () => {
     min-height: calc(var(--main-content-height) - 1rem);
   }
 
-  .weight-info-container {
+  .info-container {
     margin-top: 0.5rem;
   }
 
-  .weight-heading {
-    font-size: 1rem;
-    bottom: 1.25rem;
+  .info-container-heading {
+    font-size: 1.5rem;
+    bottom: 1.4rem;
   }
 
-  .weight-kpis {
+  .kpis {
     flex-direction: column;
   }
 
   .weight-kpi {
     height: 3.5rem;
-  }
-
-  .weight-segmented-control div button {
-    font-size: 0.1rem;
   }
 }
 </style>
