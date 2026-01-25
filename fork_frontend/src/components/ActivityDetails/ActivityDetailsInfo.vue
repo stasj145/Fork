@@ -11,7 +11,7 @@
         <input type="number" min="0" max="100" v-model="selectedActivity.calories_burned_kg_h" />
       </div>
       <div class="activity-info-item">
-        <label>Calories/h at current weight ({{ user.weight.toFixed(1) }}kg)</label>
+        <label>Calories/h at current weight ({{ user.weight_history[0]? user.weight_history[0].weight.toFixed(1) : 80 }}kg)</label>
         <span>{{ caloriesPerHourAtUserWeight }} </span>
       </div>
     </div>
@@ -38,8 +38,8 @@ const props = defineProps({
 })
 
 const caloriesPerHourAtUserWeight = computed(() => {
-  if (!selectedActivity.value) return 0
-  return (selectedActivity.value.calories_burned_kg_h * props.user.weight).toFixed(1)
+  if (!selectedActivity.value || !props.user.weight_history[0]) return 0
+  return (selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0].weight).toFixed(1)
 })
 </script>
 

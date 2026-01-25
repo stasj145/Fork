@@ -93,10 +93,14 @@ const calculatecDuration = () => {
 }
 
 const calculateCaloriesBurned = computed(() => {
+  if (!props.user.weight_history[0]) {
+    return 0
+  }
+
   let calories: number = 0
   const duration: number = calculatecDuration()
 
-  calories = selectedActivity.value.calories_burned_kg_h * props.user.weight * duration
+  calories = selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0]?.weight * duration
 
   return parseFloat(calories.toFixed(1))
 })
