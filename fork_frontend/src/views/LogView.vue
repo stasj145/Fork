@@ -13,7 +13,7 @@
             :dataset="weightDataset"
             :x-axis-values="weightXAxisLabels"
             :y-min="weightYMin"
-            :minimal-labels="weightChartSelector != '30d'"
+            :minimal-labels="weightChartSelector != '30d' && weightChartSelector != '14d'"
           ></XYChart>
         </div>
       </div>
@@ -44,6 +44,7 @@ const showLoadingError = ref(false)
 const errorDetails = ref('')
 const weightChartSelector = ref<string>('30d')
 const weightChartSelectorLookup: { [id: string]: number } = {
+  '14d': -14,
   '30d': -30,
   '90d': -90,
   '365d': -365,
@@ -70,7 +71,7 @@ const weightDataset = computed(() => {
       type: 'line',
       shape: 'circle',
       useArea: false,
-      useProgression: true,
+      useProgression: false,
       dataLabels: true,
       smooth: true,
       dashed: false,
