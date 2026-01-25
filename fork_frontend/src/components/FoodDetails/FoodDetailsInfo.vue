@@ -50,7 +50,7 @@
           <input type="number" min="0" max="100" v-model.number="proteinPerServing" />
         </div>
         <div class="food-nutrition-item">
-          <label>Total Carbs</label>
+          <label>Total Carbohydrates</label>
           <input type="number" min="0" max="100" v-model.number="carbsPerServing" />
         </div>
         <div class="food-nutrition-item">

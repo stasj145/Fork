@@ -22,7 +22,7 @@ defineProps({
 .kpi-box-root {
   height: 100%;
   width: 100%;
-  background-color: var(--color-background-tertiary);
+  background-color: inherit;
   border: none;
   border-radius: 0.5rem;
   box-shadow: 0 0px 5px rgba(0, 0, 0, 0.3);

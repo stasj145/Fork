@@ -15,24 +15,24 @@
         </div>
         <div class="kpis weight">
           <div class="weight-kpis-first-row">
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox
                 :title="'Starting weight'"
                 :value="startingWeight.toFixed(1) + ' kg'"
               ></KpiBox>
             </div>
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox :title="'Current weight'" :value="user.weight.toFixed(1) + ' kg'"></KpiBox>
             </div>
           </div>
           <div class="weight-kpis-second-row">
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox
                 :title="'Weight change %'"
                 :value="((user.weight / startingWeight) * 100 - 100).toFixed(1) + '%'"
               ></KpiBox>
             </div>
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox
                 :title="'Weight change kg'"
                 :value="(user.weight - startingWeight).toFixed(1) + ' kg'"
@@ -40,7 +40,7 @@
             </div>
           </div>
           <div class="weight-kpis-third-row">
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox
                 :title="'Avg change/day '"
                 :value="
@@ -48,7 +48,7 @@
                 "
               ></KpiBox>
             </div>
-            <div class="weight-kpi">
+            <div class="kpi weight">
               <KpiBox
                 :title="'Avg change/week'"
                 :value="
@@ -71,26 +71,128 @@
       </div>
       <div class="info-container calories">
         <span class="info-container-heading calories">Calories</span>
-        <div class="segmented-control">
+        <div class="segmented-control calories">
           <SegmentedControl
-            class="segmented-control calories"
             :options="Object.keys(dateRangeChartSelectorLookup)"
             v-model="dateRangeChartSelector"
           ></SegmentedControl>
         </div>
         <div class="kpis calories">
-          <div class="calories-kpis-first-row"></div>
-
-          <div class="calories-kpis-second-row"></div>
-
-          <div class="calories-kpis-third-row"></div>
+          <div class="calories-kpis-first-row">
+            <div class="kpi calorie">
+              <KpiBox
+                :title="'Avg/day'"
+                :value="
+                  getAverageExcludingZeros(foodLogHistory.map((log) => log.calories)).toFixed(1) +
+                  ' Kcal'
+                "
+              ></KpiBox>
+            </div>
+            <div class="kpi calorie">
+              <KpiBox
+                :title="'Avg distance to goal'"
+                :value="
+                  (
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.calories)) -
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalCalories))
+                  ).toFixed(1) + ' Kcal'
+                "
+              ></KpiBox>
+            </div>
+          </div>
         </div>
-        <div class="calorie-chart" v-if="foodLogXAxisLabels.length > 0">
+        <div class="calorie-chart">
           <XYChart
             :dataset="calorieDataset"
             :x-axis-values="foodLogXAxisLabels"
             :y-min="calorieYMin"
             :y-lable="'Kcal'"
+            :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
+          ></XYChart>
+        </div>
+      </div>
+      <div class="info-container macronutrients">
+        <span class="info-container-heading macronutrients">Macronutrients</span>
+        <div class="segmented-control macronutrients">
+          <SegmentedControl
+            :options="Object.keys(dateRangeChartSelectorLookup)"
+            v-model="dateRangeChartSelector"
+          ></SegmentedControl>
+        </div>
+        <div class="kpis macronutrients">
+          <div class="macronutrients-kpis-first-row">
+            <div class="kpi macros fat">
+              <KpiBox
+                :title="'Avg fat/day'"
+                :value="
+                  getAverageExcludingZeros(foodLogHistory.map((log) => log.fat)).toFixed(1) + ' g'
+                "
+              ></KpiBox>
+            </div>
+            <div class="kpi macros fat">
+              <KpiBox
+                :title="'Avg distance to goal'"
+                :value="
+                  (
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.fat)) -
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalFat))
+                  ).toFixed(1) + ' g'
+                "
+              ></KpiBox>
+            </div>
+          </div>
+
+          <div class="macronutrients-kpis-second-row">
+            <div class="kpi macros carbs">
+              <KpiBox
+                :title="'Avg carbs/day'"
+                :value="
+                  getAverageExcludingZeros(foodLogHistory.map((log) => log.carbs)).toFixed(1) + ' g'
+                "
+              ></KpiBox>
+            </div>
+            <div class="kpi macros carbs">
+              <KpiBox
+                :title="'Avg distance to goal'"
+                :value="
+                  (
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.carbs)) -
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalCarbs))
+                  ).toFixed(1) + ' g'
+                "
+              ></KpiBox>
+            </div>
+          </div>
+
+          <div class="macronutrients-kpis-third-row">
+            <div class="kpi macros protein">
+              <KpiBox
+                :title="'Avg protein/day'"
+                :value="
+                  getAverageExcludingZeros(foodLogHistory.map((log) => log.protein)).toFixed(1) +
+                  ' g'
+                "
+              ></KpiBox>
+            </div>
+            <div class="kpi macros protein">
+              <KpiBox
+                :title="'Avg distance to goal'"
+                :value="
+                  (
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.protein)) -
+                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalProtein))
+                  ).toFixed(1) + ' g'
+                "
+              ></KpiBox>
+            </div>
+          </div>
+        </div>
+        <div class="macronutrients-chart" v-if="foodLogXAxisLabels.length > 0">
+          <XYChart
+            :dataset="macronutrientsDataset"
+            :x-axis-values="foodLogXAxisLabels"
+            :y-min="macronutrientsYMin"
+            :y-lable="'g'"
             :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
           ></XYChart>
         </div>
@@ -125,6 +227,7 @@ const loading = ref<boolean>(true)
 const showLoadingError = ref(false)
 const errorDetails = ref('')
 const calorieDataset = ref<VueUiXyDatasetItem[]>([])
+const macronutrientsDataset = ref<VueUiXyDatasetItem[]>([])
 const foodLogXAxisLabels = ref<string[]>([])
 const dateRangeChartSelector = ref<string>('30d')
 const dateRangeChartSelectorLookup: { [id: string]: number } = {
@@ -135,9 +238,18 @@ const dateRangeChartSelectorLookup: { [id: string]: number } = {
   full: 0,
 }
 const calorieYMin = ref<number>(0)
+const macronutrientsYMin = ref<number>(0)
 
 const weightYMin = ref<number>(0)
 const startingWeight = ref<number>(0)
+
+function getAverageExcludingZeros(items: (number | null)[]): number {
+  const nonZeroItems = items.filter((item) => item !== 0 && item !== null)
+  return nonZeroItems.length > 0
+    ? <number>nonZeroItems.reduce((sum, item) => <number>sum + <number>item, 0) /
+        nonZeroItems.length
+    : 0 // Return 0 if there are no valid items
+}
 
 const weightDataset = computed(() => {
   if (!user.value || !user.value.weight_history) {
@@ -195,13 +307,77 @@ const getCalorieDataset = () => {
   if (!user.value) {
     return []
   }
-  const seriesData = foodLogHistory.map((x) => x.calories).reverse()
+  const calorieData = foodLogHistory.map((x) => x.calories).reverse()
+  const goalData = foodLogHistory.map((x) => x.goalCalories).reverse()
 
   return <VueUiXyDatasetItem[]>[
     {
       name: 'Calories',
-      series: seriesData,
+      series: calorieData,
       color: '#baff79ff',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: false,
+      useTag: 'none',
+    },
+    {
+      name: 'Goal',
+      series: goalData,
+      color: '#7a7a7a',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: true,
+      useTag: 'none',
+    },
+  ]
+}
+const getMacronutrientsDataset = () => {
+  if (!user.value) {
+    return []
+  }
+  const proteinData = foodLogHistory.map((x) => x.protein).reverse()
+  const fatData = foodLogHistory.map((x) => x.fat).reverse()
+  const carbsData = foodLogHistory.map((x) => x.carbs).reverse()
+
+  return <VueUiXyDatasetItem[]>[
+    {
+      name: 'Protein',
+      series: proteinData,
+      color: '#ff4492ff',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: false,
+      useTag: 'none',
+    },
+    {
+      name: 'Fat',
+      series: fatData,
+      color: '#97e6ff',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: false,
+      useTag: 'none',
+    },
+    {
+      name: 'Carbohydrates',
+      series: carbsData,
+      color: '#7b11fd',
       type: 'line',
       shape: 'circle',
       useArea: false,
@@ -255,6 +431,7 @@ const loadLogData = async () => {
     }
 
     calorieDataset.value = getCalorieDataset()
+    macronutrientsDataset.value = getMacronutrientsDataset()
     foodLogXAxisLabels.value = getFoodLogXAxisLabels()
   } catch (err) {
     console.error('Error loading users log data:', err)
@@ -386,7 +563,7 @@ async function createLocalFoodLogHistoryFromFoodLog(
     totalCalories += (entry.food_item.calories_per_100 / 100) * entry.quantity
     totalProtein += (entry.food_item.protein_per_100 / 100) * entry.quantity
     totalFat += (entry.food_item.fat_per_100 / 100) * entry.quantity
-    totalCarbs += (entry.food_item.fat_per_100 / 100) * entry.quantity
+    totalCarbs += (entry.food_item.carbs_per_100 / 100) * entry.quantity
   }
 
   return <LocalFoodLogHistory>{
@@ -478,7 +655,11 @@ onMounted(async () => {
 
 .weight-kpis-first-row,
 .weight-kpis-second-row,
-.weight-kpis-third-row {
+.weight-kpis-third-row,
+.calories-kpis-first-row,
+.macronutrients-kpis-first-row,
+.macronutrients-kpis-second-row,
+.macronutrients-kpis-third-row {
   width: 100%;
   height: 100%;
   display: flex;
@@ -486,9 +667,26 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.weight-kpi {
+.kpi {
   height: 5rem;
   width: 100%;
+}
+
+.kpi div {
+  background-color: var(--color-background-tertiary);
+}
+
+.kpi.calorie div {
+  background-color: #d6ffb0;
+}
+.kpi.fat div {
+  background-color: #97e6ff;
+}
+.kpi.carbs div {
+  background-color: #dbbdff;
+}
+.kpi.protein div {
+  background-color: #ff93c0;
 }
 
 .weight-chart {
@@ -517,7 +715,7 @@ onMounted(async () => {
     flex-direction: column;
   }
 
-  .weight-kpi {
+  .kpi {
     height: 3.5rem;
   }
 }

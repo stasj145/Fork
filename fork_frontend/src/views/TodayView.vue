@@ -437,7 +437,7 @@ const summaryDataset = computed(() => {
       rounding: 1,
     },
     {
-      name: 'Carbs intake',
+      name: 'Carbohydrates intake',
       value: totalCarbs.value,
       target: Math.max(foodLog.value?.goals.daily_carbs_target, totalCarbs.value),
       color: '#7b11fd',
