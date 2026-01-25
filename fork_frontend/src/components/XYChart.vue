@@ -243,7 +243,7 @@ const config = computed(() => {
       },
       legend: {
         color: '#1A1A1Aff',
-        show: false,
+        show: props.showLedgend,
         fontSize: 16,
         position: 'bottom',
         selectAllToggle: {
@@ -513,6 +513,10 @@ const props = defineProps({
     default: '',
   },
   minimalLabels: {
+    type: Boolean,
+    default: false,
+  },
+  showLedgend: {
     type: Boolean,
     default: false,
   },

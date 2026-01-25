@@ -193,6 +193,7 @@
             :x-axis-values="foodLogXAxisLabels"
             :y-min="macronutrientsYMin"
             :y-lable="'g'"
+            :show-ledgend="true"
             :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
           ></XYChart>
         </div>

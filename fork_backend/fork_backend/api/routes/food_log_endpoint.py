@@ -169,4 +169,3 @@ async def get_x_logs(n_logs: int = Query(1), user: User = Depends(get_current_us
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to get logs: {str(e)}",
         ) from e
-

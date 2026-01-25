@@ -134,7 +134,7 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user))
 
 
 @router.put("/{user_id}/weight-history", response_model=list[WeigthHistory], status_code=status.HTTP_200_OK)
-async def update_weight_history(user_id: str, 
+async def update_weight_history(user_id: str,
                                 weight_history_list: list[WeigthHistory],
                                 current_user: User = Depends(get_current_user)):
     """
