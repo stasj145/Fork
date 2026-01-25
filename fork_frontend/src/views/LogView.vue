@@ -347,6 +347,9 @@ const getMacronutrientsDataset = () => {
   const proteinData = foodLogHistory.map((x) => x.protein).reverse()
   const fatData = foodLogHistory.map((x) => x.fat).reverse()
   const carbsData = foodLogHistory.map((x) => x.carbs).reverse()
+  const proteinGoalData = foodLogHistory.map((x) => x.goalProtein).reverse()
+  const fatGoalData = foodLogHistory.map((x) => x.goalFat).reverse()
+  const carbsGoalData = foodLogHistory.map((x) => x.goalCarbs).reverse()
 
   return <VueUiXyDatasetItem[]>[
     {
@@ -363,6 +366,19 @@ const getMacronutrientsDataset = () => {
       useTag: 'none',
     },
     {
+      name: 'Fat goal',
+      series: fatGoalData,
+      color: '#ccf3ff',
+      type: 'line',
+      shape: 'triangle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: false,
+      smooth: true,
+      dashed: true,
+      useTag: 'none',
+    },
+    {
       name: 'Carbohydrates',
       series: carbsData,
       color: '#7b11fd',
@@ -376,6 +392,19 @@ const getMacronutrientsDataset = () => {
       useTag: 'none',
     },
     {
+      name: 'Carbohydrates goal',
+      series: carbsGoalData,
+      color: '#e3cdfe',
+      type: 'line',
+      shape: 'triangle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: false,
+      smooth: true,
+      dashed: true,
+      useTag: 'none',
+    },
+    {
       name: 'Protein',
       series: proteinData,
       color: '#ff4492ff',
@@ -386,6 +415,19 @@ const getMacronutrientsDataset = () => {
       dataLabels: true,
       smooth: true,
       dashed: false,
+      useTag: 'none',
+    },
+    {
+      name: 'Protein goal',
+      series: proteinGoalData,
+      color: '#ffcce1',
+      type: 'line',
+      shape: 'triangle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: false,
+      smooth: true,
+      dashed: true,
       useTag: 'none',
     },
   ]
