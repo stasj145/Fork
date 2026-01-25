@@ -2,12 +2,18 @@
   <div class="log-view-root">
     <div class="log-view-content-root" v-if="!loading">
       <div class="weight-info-container">
-        <span class="weight-heading">Weight (last 30 entries)</span>
+        <span class="weight-heading">Weight</span>
+        <SegmentedControl
+          class="weight-segmented-control"
+          :options="Object.keys(weightChartSelectorLookup)"
+          v-model="weightChartSelector"
+        ></SegmentedControl>
         <div class="weight-chart">
           <XYChart
             :dataset="weightDataset"
             :x-axis-values="weightXAxisLabels"
             :y-min="weightYMin"
+            :minimal-labels="weightChartSelector != '30d'"
           ></XYChart>
         </div>
       </div>
@@ -23,28 +29,38 @@
 
 <script setup lang="ts">
 import ErrorModal from '@/components/ErrorModal.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import XYChart from '@/components/XYChart.vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
-import type { User } from '@/types/user'
+import type { User, WeightHistory } from '@/types/user'
 import { computed, onMounted, ref } from 'vue'
 import { type VueUiXyDatasetItem } from 'vue-data-ui'
+
+let weightHistory: LocalWeightHistory[] = []
 
 const user = ref<User | null>(null)
 const loading = ref<boolean>(true)
 const showLoadingError = ref(false)
 const errorDetails = ref('')
+const weightChartSelector = ref<string>('30d')
+const weightChartSelectorLookup: { [id: string]: number } = {
+  '30d': -30,
+  '90d': -90,
+  '365d': -365,
+  full: 0,
+}
 
 const weightYMin = ref<number>(0)
 
 const weightDataset = computed(() => {
   const seriesData = user.value
-    ? user.value.weight_history
+    ? weightHistory
         .map((x) => x.weight)
         .reverse()
-        .slice(-30, user.value.weight_history.length)
+        .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
     : []
   // eslint-disable-next-line
-  weightYMin.value = Math.floor((Math.round(Math.min(...seriesData)) + 1) / 10) * 10
+  weightYMin.value = Math.floor((Math.round(Math.min(...(<number[]>seriesData))) + 1) / 10) * 10
 
   return <VueUiXyDatasetItem[]>[
     {
@@ -65,11 +81,12 @@ const weightDataset = computed(() => {
 
 const weightXAxisLabels = computed(() => {
   const xAxisData = user.value
-    ? user.value.weight_history
+    ? weightHistory
         .map((x) => x.created_at)
         .reverse()
-        .slice(-30, user.value.weight_history.length)
+        .slice(weightChartSelectorLookup[weightChartSelector.value], weightHistory.length)
     : []
+
   return xAxisData
 })
 
@@ -85,6 +102,7 @@ const loadUserData = async () => {
     user.value = await fetchWrapper.get(`/api/v1/user/${user_id}`)
     if (user.value?.weight_history[0]) {
       user.value.weight = user.value?.weight_history[0]?.weight
+      weightHistory = fillGaps(user.value.weight_history)
     }
   } catch (err) {
     console.error('Error loading user data:', err)
@@ -95,6 +113,58 @@ const loadUserData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+interface LocalWeightHistory {
+  id?: string
+  weight: number | null
+  created_at: string
+}
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function fillGaps(weights: WeightHistory[]): LocalWeightHistory[] {
+  if (!weights[0]) {
+    return []
+  }
+
+  const result: LocalWeightHistory[] = [weights[0]]
+
+  for (let i = 1; i < weights.length; i++) {
+    const prev = result[result.length - 1]!
+    const curr = weights[i]!
+
+    const prevDate = new Date(prev.created_at)
+    const currDate = new Date(curr.created_at)
+
+    // Calculate the difference in days between previous and current dates
+    const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
+
+    // Process missing dates between prev and curr if there's a gap > 1 day
+    if (daysDiff > 1) {
+      const currentDate = new Date(prevDate)
+      currentDate.setDate(prevDate.getDate() - 1)
+
+      while (currentDate > currDate) {
+        result.push({
+          created_at: formatDate(currentDate),
+          id: undefined,
+          weight: null,
+        })
+
+        currentDate.setDate(currentDate.getDate() - 1)
+      }
+    }
+
+    result.push(<LocalWeightHistory>curr)
+  }
+
+  return result
 }
 
 onMounted(async () => {
@@ -167,6 +237,10 @@ onMounted(async () => {
   .weight-heading {
     font-size: 1rem;
     bottom: 1.25rem;
+  }
+
+  .weight-segmented-control div button {
+    font-size: 0.1rem;
   }
 }
 </style>

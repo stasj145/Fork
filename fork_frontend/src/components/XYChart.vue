@@ -148,7 +148,7 @@ const config = computed(() => {
       grid: {
         stroke: '#e1e5e8ff',
         showVerticalLines: false,
-        showHorizontalLines: false,
+        showHorizontalLines: true,
         position: 'middle',
         frame: {
           show: false,
@@ -217,7 +217,7 @@ const config = computed(() => {
               },
             },
             fontSize: 18,
-            showOnlyFirstAndLast: false,
+            showOnlyFirstAndLast: props.minimalLabels,
             showOnlyAtModulo: false,
             modulo: 12,
             yOffset: 8,
@@ -288,7 +288,7 @@ const config = computed(() => {
         showTimeLabel: true,
         showValue: true,
         showPercentage: false,
-        roundingValue: 0,
+        roundingValue: 1,
         roundingPercentage: 0,
         useDefaultTimeFormat: true,
         timeFormat: 'yyyy-MM-dd HH:mm:ss',
@@ -397,7 +397,7 @@ const config = computed(() => {
         strokeWidth: 2,
       },
       labels: {
-        show: true,
+        show: !props.minimalLabels,
         offsetY: -16,
         rounding: 1,
         color: '#1A1A1Aff',
@@ -507,6 +507,10 @@ const props = defineProps({
   yMin: {
     type: Number,
     default: 0,
+  },
+  minimalLabels: {
+    type: Boolean,
+    default: false,
   },
 })
 </script>
