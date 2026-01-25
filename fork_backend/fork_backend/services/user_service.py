@@ -337,7 +337,7 @@ class UserService:
     async def update_weight_history_list(self, user_id: str, weight_history_list: list[WeigthHistory]) -> list[WeigthHistory]:
         """Update the weight history for a user with a list of weight history objects.
         If an ID is missing from the provided list, the corresponding object will be deleted.
-        
+
         :param user_id: The id of the user to update
         :param weight_history_list: The history items to update with
         :return: The updated list, sorted with newest dates first
@@ -364,7 +364,7 @@ class UserService:
                         # Update existing entry
                         existing_entry.weight = entry.weight
                         stmt = update(WeigthHistory).where(
-                            WeigthHistory.id == entry.id).values({"weight": entry.weight})
+                            WeigthHistory.id == entry.id).values({"weight": entry.weight, "created_at": entry.created_at})
                         await db.execute(stmt)
                         await db.commit()
                 else:
