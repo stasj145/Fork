@@ -109,6 +109,37 @@ class ActivityLogService:
             logger.error("Failed to get activity log for user '%s' and date '%s': %s", user_id, log_date,
                          str(e))
             raise e
+        
+    async def get_last_x_logs(self, user_id: str, n_logs: int) -> list[ActivityLog]:
+        """
+        Get a list of ActivityLog
+
+        :param user_id: The ID of the user.
+        :param n_logs: How many logs to get. Starting with the latest available based on "date".
+            0 to disable limit and get all (USE WITH CAUTION!).
+
+        :return: List of ActivityLog with max length of n_logs.
+            (might be shorter if less entries are available)
+        """
+        try:
+            async with get_async_db() as db:
+                stmt = select(
+                    ActivityLog).where(ActivityLog.user_id == user_id).order_by(
+                        ActivityLog.date.desc()).options(
+                        selectinload(ActivityLog.activity_entries).selectinload(
+                            ActivityEntry.activity),
+                        selectinload(ActivityLog.goals)
+                        )
+                if n_logs > 0:
+                    stmt = stmt.limit(n_logs)
+
+                result = await db.execute(stmt)
+                food_logs = result.scalars().all()
+                return food_logs
+        except Exception as e:
+            logger.error("Failed to get activity logs for user '%s': %s", user_id, str(e))
+            raise e
+
 
     async def add_activity_entry(self, user_id: str, log_date: date, activity_entry: ActivityEntry
                                  ) -> ActivityEntry:

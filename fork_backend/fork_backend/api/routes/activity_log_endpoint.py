@@ -1,7 +1,7 @@
 """Activity log management endpoints"""
 
 from datetime import date as date_class
-from fastapi import APIRouter, status, Depends, HTTPException, Path, Body
+from fastapi import APIRouter, status, Depends, HTTPException, Path, Body, Query
 
 from fork_backend.core.logging import get_logger
 from fork_backend.api.dependencies import get_current_user
@@ -140,4 +140,29 @@ async def update_activity_entry(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to update activity entry: {str(e)}",
+        ) from e
+
+@router.get("/last/activity", response_model=list[ActivityLogInDB], status_code=status.HTTP_200_OK)
+async def get_x_logs(n_logs: int = Query(1), user: User = Depends(get_current_user)):
+    """
+    Get the last x logs. Might be less if fewer are available
+    :param n_logs: n_logs: How many logs to get. Starting with the latest available based on "date".
+            0 to disable limit and get all (USE WITH CAUTION!).
+    :param user: The currently logged in user.
+
+    :return: List of ActivityLog with max length of n_logs. 
+        (might be shorter if less entries are available)
+
+    """
+    service = ActivityLogService()
+
+    try:
+        last_logs: list[ActivityLog] = await service.get_last_x_logs(user_id=user.id, n_logs=n_logs)
+        return [ActivityLogInDB.model_validate(log) for log in last_logs]
+
+    except Exception as e:
+        log.error("Failed to get last %x activity logs: %s", n_logs, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to get activity logs: {str(e)}",
         ) from e

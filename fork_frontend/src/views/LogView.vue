@@ -108,6 +108,7 @@
             :y-min="calorieYMin"
             :y-lable="'Kcal'"
             :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
+            :show-ledgend="true"
           ></XYChart>
         </div>
       </div>
@@ -215,6 +216,7 @@ import SegmentedControl from '@/components/SegmentedControl.vue'
 import Spinner from '@/components/Spinner.vue'
 import XYChart from '@/components/XYChart.vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
+import type { ActivityLog } from '@/types/activityLog'
 import { type FoodLog } from '@/types/foodLog'
 import type { User, WeightHistory } from '@/types/user'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -222,6 +224,7 @@ import { type VueUiXyDatasetItem } from 'vue-data-ui'
 
 let weightHistory: LocalWeightHistory[] = []
 let foodLogHistory: LocalFoodLogHistory[] = []
+let activityLogHistory: LocalActivityLogHistory[] = []
 
 const user = ref<User | null>(null)
 const loading = ref<boolean>(true)
@@ -244,6 +247,36 @@ const macronutrientsYMin = ref<number>(0)
 const weightYMin = ref<number>(0)
 const startingWeight = ref<number>(0)
 
+interface LocalActivityLogHistory {
+  id?: string
+  date: string
+
+  burned: number | null
+  goalBurned: number | null
+}
+
+interface LocalFoodLogHistory {
+  id?: string
+  date: string
+
+  calories: number | null
+  protein: number | null
+  fat: number | null
+  carbs: number | null
+
+  goalCalories: number | null
+  goalProtein: number | null
+  goalFat: number | null
+  goalCarbs: number | null
+}
+
+interface LocalWeightHistory {
+  id?: string
+  weight: number | null
+  created_at: string
+}
+
+
 function getAverageExcludingZeros(items: (number | null)[]): number {
   const nonZeroItems = items.filter((item) => item !== 0 && item !== null)
   return nonZeroItems.length > 0
@@ -258,7 +291,6 @@ const weightDataset = computed(() => {
   }
   const seriesData = weightHistory
     .map((x) => x.weight)
-    .reverse()
     .slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], weightHistory.length)
 
   // eslint-disable-next-line
@@ -293,7 +325,6 @@ const weightXAxisLabels = computed(() => {
   const xAxisData = user.value
     ? weightHistory
         .map((x) => x.created_at)
-        .reverse()
         .slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], weightHistory.length)
     : []
 
@@ -308,12 +339,19 @@ const getCalorieDataset = () => {
   if (!user.value) {
     return []
   }
-  const calorieData = foodLogHistory.map((x) => x.calories).reverse()
-  const goalData = foodLogHistory.map((x) => x.goalCalories).reverse()
 
-  return <VueUiXyDatasetItem[]>[
+  const history = foodLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length)
+  const historyActivity = activityLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], activityLogHistory.length)
+
+  const calorieData = history.map((x) => x.calories)
+  const goalData = history.map((x) => x.goalCalories)
+  const burnedData = historyActivity.map((x) => x.burned)
+  const burnedGoalData = historyActivity.map((x) => x.goalBurned)
+
+
+  const retDataset = <VueUiXyDatasetItem[]>[
     {
-      name: 'Calories',
+      name: 'Calories consumed',
       series: calorieData,
       color: '#baff79ff',
       type: 'line',
@@ -326,9 +364,9 @@ const getCalorieDataset = () => {
       useTag: 'none',
     },
     {
-      name: 'Goal',
+      name: 'Consumed goal',
       series: goalData,
-      color: '#7a7a7a',
+      color: '#e5ffcc',
       type: 'line',
       shape: 'triangle',
       useArea: false,
@@ -339,17 +377,53 @@ const getCalorieDataset = () => {
       useTag: 'none',
     },
   ]
+
+  if (user.value.goals.daily_calorie_burn_target > 0) {
+    retDataset.push({
+      name: 'Calories burned',
+      series: burnedData,
+      color: '#5affc3ff',
+      type: 'line',
+      shape: 'circle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: true,
+      smooth: true,
+      dashed: false,
+      useTag: 'none',
+    },
+    {
+      name: 'Burned goal',
+      series: burnedGoalData,
+      color: '#ccffec',
+      type: 'line',
+      shape: 'triangle',
+      useArea: false,
+      useProgression: false,
+      dataLabels: false,
+      smooth: true,
+      dashed: true,
+      useTag: 'none',
+    },
+)
+
+  }
+
+  return retDataset
 }
 const getMacronutrientsDataset = () => {
   if (!user.value) {
     return []
   }
-  const proteinData = foodLogHistory.map((x) => x.protein).reverse()
-  const fatData = foodLogHistory.map((x) => x.fat).reverse()
-  const carbsData = foodLogHistory.map((x) => x.carbs).reverse()
-  const proteinGoalData = foodLogHistory.map((x) => x.goalProtein).reverse()
-  const fatGoalData = foodLogHistory.map((x) => x.goalFat).reverse()
-  const carbsGoalData = foodLogHistory.map((x) => x.goalCarbs).reverse()
+
+  const history = foodLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length)
+
+  const proteinData = history.map((x) => x.protein)
+  const fatData = history.map((x) => x.fat)
+  const carbsData = history.map((x) => x.carbs)
+  const proteinGoalData = history.map((x) => x.goalProtein)
+  const fatGoalData = history.map((x) => x.goalFat)
+  const carbsGoalData = history.map((x) => x.goalCarbs)
 
   return <VueUiXyDatasetItem[]>[
     {
@@ -434,7 +508,7 @@ const getMacronutrientsDataset = () => {
 }
 
 const getFoodLogXAxisLabels = () => {
-  const xAxisData = foodLogHistory ? foodLogHistory.map((x) => x.date).reverse() : []
+  const xAxisData = foodLogHistory ? foodLogHistory.map((x) => x.date).slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length) : []
 
   return xAxisData
 }
@@ -452,6 +526,7 @@ const loadUserData = async () => {
     if (user.value?.weight_history[0]) {
       user.value.weight = user.value?.weight_history[0]?.weight
       weightHistory = fillGaps(user.value.weight_history)
+      weightHistory.reverse()
     }
   } catch (err) {
     console.error('Error loading user data:', err)
@@ -471,6 +546,16 @@ const loadLogData = async () => {
     )
     if (foodLogList) {
       foodLogHistory = await prepFoodLogsData(foodLogList)
+      foodLogHistory.reverse()
+
+    }
+
+    const activityLogList = await fetchWrapper.get(
+      `/api/v1/log/last/activity?n_logs=${<number>dateRangeChartSelectorLookup[dateRangeChartSelector.value] * -1}`,
+    )
+    if (activityLogList) {
+      activityLogHistory = await prepActivityLogsData(activityLogList)
+      activityLogHistory.reverse()
     }
 
     calorieDataset.value = getCalorieDataset()
@@ -485,11 +570,6 @@ const loadLogData = async () => {
   }
 }
 
-interface LocalWeightHistory {
-  id?: string
-  weight: number | null
-  created_at: string
-}
 
 function formatDate(date: Date): string {
   const year = date.getFullYear()
@@ -514,6 +594,10 @@ function fillGaps(weights: WeightHistory[]): LocalWeightHistory[] {
 
     const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
 
+    if (dateRangeChartSelector.value != "full" && daysDiff > (<number>dateRangeChartSelectorLookup[dateRangeChartSelector.value] * - 1) + 1) {
+      continue
+    }
+
     if (daysDiff > 1) {
       const currentDate = new Date(prevDate)
       currentDate.setDate(prevDate.getDate() - 1)
@@ -535,21 +619,6 @@ function fillGaps(weights: WeightHistory[]): LocalWeightHistory[] {
   return result
 }
 
-interface LocalFoodLogHistory {
-  id?: string
-  date: string
-
-  calories: number | null
-  protein: number | null
-  fat: number | null
-  carbs: number | null
-
-  goalCalories: number | null
-  goalProtein: number | null
-  goalFat: number | null
-  goalCarbs: number | null
-}
-
 async function prepFoodLogsData(foodLogs: FoodLog[]): Promise<LocalFoodLogHistory[]> {
   if (!foodLogs[0]) {
     return []
@@ -566,6 +635,10 @@ async function prepFoodLogsData(foodLogs: FoodLog[]): Promise<LocalFoodLogHistor
 
     const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
 
+    if ( dateRangeChartSelector.value != "full" && daysDiff > (<number>dateRangeChartSelectorLookup[dateRangeChartSelector.value] * - 1) + 1) {
+      continue
+    }
+
     if (daysDiff > 1) {
       const currentDate = new Date(prevDate)
       currentDate.setDate(prevDate.getDate() - 1)
@@ -575,10 +648,12 @@ async function prepFoodLogsData(foodLogs: FoodLog[]): Promise<LocalFoodLogHistor
           id: undefined,
           date: formatDate(currentDate),
           calories: null,
+          burned: null,
           protein: null,
           fat: null,
           carbs: null,
           goalCalories: null,
+          goalBurned: null,
           goalProtein: null,
           goalCarbs: null,
           goalFat: null,
@@ -620,6 +695,65 @@ async function createLocalFoodLogHistoryFromFoodLog(
     goalProtein: foodLog.goals.daily_protein_target,
     goalCarbs: foodLog.goals.daily_carbs_target,
     goalFat: foodLog.goals.daily_fat_target,
+  }
+}
+
+async function prepActivityLogsData(activityLogs: ActivityLog[]): Promise<LocalActivityLogHistory[]> {
+  if (!activityLogs[0]) {
+    return []
+  }
+
+  const result: LocalActivityLogHistory[] = [await createLocalActivityLogHistoryFromActivityLog(activityLogs[0])]
+
+  for (let i = 1; i < activityLogs.length; i++) {
+    const prev = result[result.length - 1]!
+    const curr = activityLogs[i]!
+
+    const prevDate = new Date(prev.date)
+    const currDate = new Date(curr.date)
+
+    const daysDiff = (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
+
+    if (dateRangeChartSelector.value != "full" && daysDiff > (<number>dateRangeChartSelectorLookup[dateRangeChartSelector.value] * - 1) + 1) {
+      continue
+    }
+
+    if (daysDiff > 1) {
+      const currentDate = new Date(prevDate)
+      currentDate.setDate(prevDate.getDate() - 1)
+
+      while (currentDate > currDate) {
+        result.push(<LocalActivityLogHistory>{
+          id: undefined,
+          date: formatDate(currentDate),
+          burned: null,
+          goalBurned: null,
+        })
+
+        currentDate.setDate(currentDate.getDate() - 1)
+      }
+    }
+
+    result.push(await createLocalActivityLogHistoryFromActivityLog(curr))
+  }
+
+  return result
+}
+
+async function createLocalActivityLogHistoryFromActivityLog(
+  activityLog: ActivityLog,
+): Promise<LocalActivityLogHistory> {
+  let totalBurned: number = 0
+
+  for (const entry of activityLog.activity_entries) {
+    totalBurned += entry.calories_burned
+  }
+
+  return <LocalActivityLogHistory>{
+    id: activityLog.id,
+    date: activityLog.date,
+    burned: totalBurned,
+    goalBurned: activityLog.goals.daily_calorie_burn_target
   }
 }
 
