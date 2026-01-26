@@ -73,8 +73,6 @@ async def update_food(food_id: str, food_info: FoodUpdate,
     Update a specific user by ID.
     """
 
-    print(food_info)
-
     try:
         service = FoodService()
 
@@ -85,11 +83,9 @@ async def update_food(food_id: str, food_info: FoodUpdate,
 
         # construct new FoodItem
         for k, v in vars(food_info).items():
-            print(k, v)
             if v is None:
                 setattr(food_info, k, getattr(food_to_update, k))
         
-        print("reached")
 
         new_food_item: FoodItem = FoodItem(
             id=food_id,
@@ -98,8 +94,6 @@ async def update_food(food_id: str, food_info: FoodUpdate,
             ingredients=[FoodItemIngredient(parent_id=food_id, ingredient_id=ingredient.ingredient_id, quantity=ingredient.quantity) for ingredient in food_info.ingredients],
             **food_info.model_dump(exclude=["ingredients"])
         )
-
-        print(new_food_item.__dict__)
 
         updated_food_item = await service.update_food_item(new_food_item)
 

@@ -130,12 +130,10 @@ class FoodService:
 
                 # Check if ingredients have actually changed before updating them
                 if self._have_ingredients_changed(original.ingredients, food_item.ingredients):
-                    print("trying to update ingredients")
                     # Clear existing ingredients and add new ones
                     original.ingredients.clear()
 
                     for item in food_item.ingredients:
-                        print(item.__dict__)
                         new_ingredient = FoodItemIngredient(
                             parent_id=food_item.id,
                             ingredient_id=item.ingredient_id,
@@ -398,7 +396,6 @@ class FoodService:
         try:
             # Generate query embedding asynchronously
             query_embedding = await self._encode_async(query)
-            print(query_embedding)
 
             async with get_async_db() as db:
                 similarity = 1 - \
@@ -433,7 +430,6 @@ class FoodService:
 
                 result = await db.execute(stmt)
                 rows = result.all()
-                print(rows)
 
                 log.debug("Search for '%s' returned %d results",
                           query, len(rows))
