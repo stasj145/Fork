@@ -365,6 +365,7 @@ class FoodService:
             id="PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB",
             user_id=user_id,
             private=False,
+            hidden=False,
             name=str(response.get("product_name", "")),
             brand=str(response.get("brands", "")),
             description=", ".join([ing.get("text", "")
