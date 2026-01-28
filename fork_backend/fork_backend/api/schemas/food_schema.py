@@ -50,6 +50,7 @@ class FoodBase(ForkBaseSchema):
 class FoodCreate(FoodBase):
     """Properties to receive via API on creation"""
     private: bool = Field(False, examples=[False])
+    hidden: Optional[bool] = Field(None, examples=[False])
     barcode: Optional[str] = Field(None, max_length=50, examples=["0123456789123"])
     ingredients: Optional[list[FoodIngredientCreate]] = Field(None, description="All, if any, ingredients of the food")
 
