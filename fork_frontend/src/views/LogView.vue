@@ -81,34 +81,57 @@
           <div class="calories-kpis-first-row">
             <div class="kpi calorie">
               <KpiBox
-                :title="'Avg/day'"
+                :title="'Avg consumed/day'"
                 :value="
-                  getAverageExcludingZeros(foodLogHistory.map((log) => log.calories)).toFixed(1) +
+                  dataListAverages.caloriesListAvg.toFixed(1) +
                   ' Kcal'
                 "
               ></KpiBox>
             </div>
             <div class="kpi calorie">
               <KpiBox
-                :title="'Avg distance to goal'"
+                :title="'Avg Δ to goal'"
                 :value="
                   (
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.calories)) -
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalCalories))
+                    dataListAverages.caloriesListAvg -
+                    dataListAverages.caloriesGoalListAvg
+                  ).toFixed(1) + ' Kcal'
+                "
+              ></KpiBox>
+            </div>
+          </div>
+          <div class="calories-kpis-second-row" v-if="user.goals.daily_calorie_burn_target > 0">
+            <div class="kpi burned">
+              <KpiBox
+                :title="'Avg burned/day'"
+                :value="
+                  dataListAverages.burnedListAvg.toFixed(1) +
+                  ' Kcal'
+                "
+              ></KpiBox>
+            </div>
+            <div class="kpi burned">
+              <KpiBox
+                :title="'Avg Δ to goal'"
+                :value="
+                  (
+                    dataListAverages.burnedListAvg -
+                    dataListAverages.burnedGoalListAvg
                   ).toFixed(1) + ' Kcal'
                 "
               ></KpiBox>
             </div>
           </div>
         </div>
-        <div class="calorie-chart">
+        <div class="calorie-chart" v-if="shouldRenderChart">
           <XYChart
             :dataset="calorieDataset"
             :x-axis-values="foodLogXAxisLabels"
             :y-min="calorieYMin"
             :y-lable="'Kcal'"
-            :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
             :show-ledgend="true"
+            :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
+            :xAxisRotation="(dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d') ? -0.1 : 0"
           ></XYChart>
         </div>
       </div>
@@ -126,17 +149,17 @@
               <KpiBox
                 :title="'Avg fat/day'"
                 :value="
-                  getAverageExcludingZeros(foodLogHistory.map((log) => log.fat)).toFixed(1) + ' g'
+                  dataListAverages.fatListAvg.toFixed(1) + ' g'
                 "
               ></KpiBox>
             </div>
             <div class="kpi macros fat">
               <KpiBox
-                :title="'Avg distance to goal'"
+                :title="'Avg Δ to goal'"
                 :value="
                   (
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.fat)) -
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalFat))
+                    dataListAverages.fatListAvg -
+                    dataListAverages.fatGoalListAvg
                   ).toFixed(1) + ' g'
                 "
               ></KpiBox>
@@ -148,17 +171,17 @@
               <KpiBox
                 :title="'Avg carbs/day'"
                 :value="
-                  getAverageExcludingZeros(foodLogHistory.map((log) => log.carbs)).toFixed(1) + ' g'
+                  dataListAverages.carbsListAvg.toFixed(1) + ' g'
                 "
               ></KpiBox>
             </div>
             <div class="kpi macros carbs">
               <KpiBox
-                :title="'Avg distance to goal'"
+                :title="'Avg Δ to goal'"
                 :value="
                   (
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.carbs)) -
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalCarbs))
+                    dataListAverages.carbsListAvg -
+                    dataListAverages.carbsGoalListAvg
                   ).toFixed(1) + ' g'
                 "
               ></KpiBox>
@@ -170,25 +193,25 @@
               <KpiBox
                 :title="'Avg protein/day'"
                 :value="
-                  getAverageExcludingZeros(foodLogHistory.map((log) => log.protein)).toFixed(1) +
+                  dataListAverages.proteinListAvg.toFixed(1) +
                   ' g'
                 "
               ></KpiBox>
             </div>
             <div class="kpi macros protein">
               <KpiBox
-                :title="'Avg distance to goal'"
+                :title="'Avg Δ to goal'"
                 :value="
                   (
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.protein)) -
-                    getAverageExcludingZeros(foodLogHistory.map((log) => log.goalProtein))
+                    dataListAverages.proteinListAvg -
+                    dataListAverages.proteinGoalListAvg
                   ).toFixed(1) + ' g'
                 "
               ></KpiBox>
             </div>
           </div>
         </div>
-        <div class="macronutrients-chart" v-if="foodLogXAxisLabels.length > 0">
+        <div class="macronutrients-chart" v-if="shouldRenderChart">
           <XYChart
             :dataset="macronutrientsDataset"
             :x-axis-values="foodLogXAxisLabels"
@@ -196,6 +219,7 @@
             :y-lable="'g'"
             :show-ledgend="true"
             :minimal-labels="dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d'"
+            :xAxisRotation="(dateRangeChartSelector != '30d' && dateRangeChartSelector != '14d') ? -0.1 : 0"
           ></XYChart>
         </div>
       </div>
@@ -219,8 +243,10 @@ import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import type { ActivityLog } from '@/types/activityLog'
 import { type FoodLog } from '@/types/foodLog'
 import type { User, WeightHistory } from '@/types/user'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { type VueUiXyDatasetItem } from 'vue-data-ui'
+
+const shouldRenderChart = ref(true)
 
 let weightHistory: LocalWeightHistory[] = []
 let foodLogHistory: LocalFoodLogHistory[] = []
@@ -231,9 +257,246 @@ const loading = ref<boolean>(true)
 const showLoadingError = ref(false)
 const errorDetails = ref('')
 const calorieDataset = ref<VueUiXyDatasetItem[]>([])
-const macronutrientsDataset = ref<VueUiXyDatasetItem[]>([])
-const foodLogXAxisLabels = ref<string[]>([])
-const dateRangeChartSelector = ref<string>('30d')
+const macronutrientsDataset = shallowRef<VueUiXyDatasetItem[]>([])
+const foodLogXAxisLabels = shallowRef<string[]>([])
+const dateRangeChartSelector = shallowRef<string>('30d')
+
+const dataLists = shallowRef<DataLists>(getEmptyDataListsObject())
+const dataListAverages = shallowRef<DataListAverages>(getEmpytDataListAveragesObject())
+
+interface DataLists {
+  caloriesList: (number | null)[]
+  caloriesGoalList: (number | null)[]
+  fatList: (number | null)[]
+  fatGoalList: (number | null)[]
+  carbsList: (number | null)[]
+  carbsGoalList: (number | null)[]
+  proteinList: (number | null)[]
+  proteinGoalList: (number | null)[]
+  burnedList: (number | null)[]
+  burnedGoalList: (number | null)[]
+}
+
+interface DataListAverages {
+  caloriesListAvg: number
+  caloriesGoalListAvg: number
+  fatListAvg: number
+  fatGoalListAvg: number
+  carbsListAvg: number
+  carbsGoalListAvg: number
+  proteinListAvg: number
+  proteinGoalListAvg: number
+  burnedListAvg: number
+  burnedGoalListAvg: number
+}
+
+function getEmpytDataListAveragesObject() {
+  return <DataListAverages>{
+  caloriesListAvg: 0,
+  caloriesGoalListAvg: 0,
+  fatListAvg: 0,
+  fatGoalListAvg: 0,
+  carbsListAvg: 0,
+  carbsGoalListAvg: 0,
+  proteinListAvg: 0,
+  proteinGoalListAvg: 0,
+  burnedListAvg: 0,
+  burnedGoalListAvg: 0
+  }
+}
+
+function getEmptyDataListsObject() {
+  return <DataLists>{
+  caloriesList: [],
+  caloriesGoalList: [],
+  fatList: [],
+  fatGoalList: [],
+  carbsList: [],
+  carbsGoalList: [],
+  proteinList: [],
+  proteinGoalList: [],
+  burnedList: [],
+  burnedGoalList: []
+  }
+}
+
+
+// TODO: compress all arrays at once instead of individually.
+function compressArray(array: (number | null)[], maxLength: number): (number | null)[] {
+  if (array.length <= maxLength) return array;
+
+  const chunkSize = Math.ceil(array.length / maxLength) || 1;
+  const compressedArray: (number | null)[] = [];
+
+  for (let i = 0; i < array.length; i += chunkSize) {
+
+    const end = Math.min(i + chunkSize, array.length);
+    const chunk = array.slice(i, end);
+
+    // Skip if chunk is empty
+    if (chunk.length === 0) continue;
+
+    let sum = 0;
+    let count = 0;
+
+    for (const value of chunk) {
+      if (value !== null && value > 0) {
+        sum += value;
+        count++;
+      }
+    }
+
+    const avg = count > 0 ? sum / count : null;
+
+    // Add the average to the compressed array
+    compressedArray.push(<number | null>avg);
+  }
+
+  return compressedArray;
+}
+
+function compressLabels(array: string[], maxLength: number): string[] {
+    if (array.length <= maxLength) return array;
+
+  const chunkSize = Math.ceil(array.length / maxLength) || 1;
+  const compressedArray: string[] = [];
+
+  for (let i = 0; i < array.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, array.length);
+
+    const chunk = array.slice(i, end);
+
+    // Skip if chunk is empty
+    if (chunk.length === 0) continue;
+
+    const compressionString = chunk[0] + "\n- " + chunk[chunk.length - 1]
+    compressedArray.push(compressionString)
+  }
+
+  return compressedArray
+}
+
+// Modify the updateListsAndAverages function
+async function updateListsAndAverages() {
+  const slicedFoodLogHistory = foodLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length)
+  const slicedActivityLogHistory = activityLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], activityLogHistory.length)
+  const length = slicedFoodLogHistory.length
+  // Pre-allocate arrays
+  const caloriesList = []
+  const caloriesGoalList = []
+  const fatList = []
+  const fatGoalList = []
+  const carbsList = []
+  const carbsGoalList = []
+  const proteinList = []
+  const proteinGoalList = []
+  const burnedList = []
+  const burnedGoalList = []
+  const xAxisLabels = []
+
+  let caloriesSum = 0
+  let caloriesGoalSum = 0
+  let fatSum = 0
+  let fatGoalSum = 0
+  let carbsSum = 0
+  let carbsGoalSum = 0
+  let proteinSum = 0
+  let proteinGoalSum = 0
+  let burnedSum = 0
+  let burnedGoalSum = 0
+  let nonEmptyEntries = 0
+  let encounteredNonNullEntry = false
+  for (let index = 0; index < length; index++) {
+    const foodLog = slicedFoodLogHistory[index]!
+    const activityLog = slicedActivityLogHistory[index]!
+    if (foodLog.id) {
+      encounteredNonNullEntry = true
+    }
+    if (!encounteredNonNullEntry) {
+      continue
+    }
+    xAxisLabels.push(foodLog.date)
+    caloriesList.push(foodLog.calories)
+    caloriesGoalList.push(foodLog.goalCalories)
+    fatList.push(foodLog.fat)
+    fatGoalList.push(foodLog.goalFat)
+    carbsList.push(foodLog.carbs)
+    carbsGoalList.push(foodLog.goalCarbs)
+    proteinList.push(foodLog.protein)
+    proteinGoalList.push(foodLog.goalProtein)
+    burnedList.push(activityLog.burned)
+    burnedGoalList.push(activityLog.goalBurned)
+    if (foodLog.id) {
+      caloriesSum += <number>foodLog.calories
+      caloriesGoalSum += <number>foodLog.goalCalories
+      fatSum += <number>foodLog.fat
+      fatGoalSum += <number>foodLog.goalFat
+      carbsSum += <number>foodLog.carbs
+      carbsGoalSum += <number>foodLog.goalCarbs
+      proteinSum += <number>foodLog.protein
+      proteinGoalSum += <number>foodLog.goalProtein
+      burnedSum += <number>activityLog.burned
+      burnedGoalSum += <number>activityLog.goalBurned
+      nonEmptyEntries++
+    }
+  }
+  // Compute averages
+  const avgCalories = nonEmptyEntries > 0 ? caloriesSum / nonEmptyEntries : 0
+  const avgCaloriesGoal = nonEmptyEntries > 0 ? caloriesGoalSum / nonEmptyEntries : 0
+  const avgFat = nonEmptyEntries > 0 ? fatSum / nonEmptyEntries : 0
+  const avgFatGoal = nonEmptyEntries > 0 ? fatGoalSum / nonEmptyEntries : 0
+  const avgCarbs = nonEmptyEntries > 0 ? carbsSum / nonEmptyEntries : 0
+  const avgCarbsGoal = nonEmptyEntries > 0 ? carbsGoalSum / nonEmptyEntries : 0
+  const avgProtein = nonEmptyEntries > 0 ? proteinSum / nonEmptyEntries : 0
+  const avgProteinGoal = nonEmptyEntries > 0 ? proteinGoalSum / nonEmptyEntries : 0
+  const avgBurned = nonEmptyEntries > 0 ? burnedSum / nonEmptyEntries : 0
+  const avgBurnedGoal = nonEmptyEntries > 0 ? burnedGoalSum / nonEmptyEntries : 0
+
+  // Compress arrays if needed
+  const maxLength = 100;
+
+  const compressedCaloriesList = compressArray(caloriesList, maxLength);
+  const compressedCaloriesGoalList = compressArray(caloriesGoalList, maxLength);
+  const compressedFatList = compressArray(fatList, maxLength);
+  const compressedFatGoalList = compressArray(fatGoalList, maxLength);
+  const compressedCarbsList = compressArray(carbsList, maxLength);
+  const compressedCarbsGoalList = compressArray(carbsGoalList, maxLength);
+  const compressedProteinList = compressArray(proteinList, maxLength);
+  const compressedProteinGoalList = compressArray(proteinGoalList, maxLength);
+  const compressedBurnedList = compressArray(burnedList, maxLength);
+  const compressedBurnedGoalList = compressArray(burnedGoalList, maxLength);
+
+  // Compress the x-axis labels as well
+  // const compressedXAxisLabels = compressArray(xAxisLabels as unknown as (number | null)[], maxLength);
+
+  dataLists.value = {
+    caloriesList: compressedCaloriesList,
+    caloriesGoalList: compressedCaloriesGoalList,
+    fatList: compressedFatList,
+    fatGoalList: compressedFatGoalList,
+    carbsList: compressedCarbsList,
+    carbsGoalList: compressedCarbsGoalList,
+    proteinList: compressedProteinList,
+    proteinGoalList: compressedProteinGoalList,
+    burnedList: compressedBurnedList,
+    burnedGoalList: compressedBurnedGoalList,
+  }
+  dataListAverages.value = {
+    caloriesListAvg: avgCalories,
+    caloriesGoalListAvg: avgCaloriesGoal,
+    fatListAvg: avgFat,
+    fatGoalListAvg: avgFatGoal,
+    carbsListAvg: avgCarbs,
+    carbsGoalListAvg: avgCarbsGoal,
+    proteinListAvg: avgProtein,
+    proteinGoalListAvg: avgProteinGoal,
+    burnedListAvg: avgBurned,
+    burnedGoalListAvg: avgBurnedGoal,
+  }
+  // Convert x-axis labels back to string type
+  foodLogXAxisLabels.value = compressLabels(xAxisLabels, maxLength)
+}
+
 const dateRangeChartSelectorLookup: { [id: string]: number } = {
   '14d': -14,
   '30d': -30,
@@ -274,15 +537,6 @@ interface LocalWeightHistory {
   id?: string
   weight: number | null
   created_at: string
-}
-
-
-function getAverageExcludingZeros(items: (number | null)[]): number {
-  const nonZeroItems = items.filter((item) => item !== 0 && item !== null)
-  return nonZeroItems.length > 0
-    ? <number>nonZeroItems.reduce((sum, item) => <number>sum + <number>item, 0) /
-        nonZeroItems.length
-    : 0 // Return 0 if there are no valid items
 }
 
 const weightDataset = computed(() => {
@@ -340,19 +594,10 @@ const getCalorieDataset = () => {
     return []
   }
 
-  const history = foodLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length)
-  const historyActivity = activityLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], activityLogHistory.length)
-
-  const calorieData = history.map((x) => x.calories)
-  const goalData = history.map((x) => x.goalCalories)
-  const burnedData = historyActivity.map((x) => x.burned)
-  const burnedGoalData = historyActivity.map((x) => x.goalBurned)
-
-
   const retDataset = <VueUiXyDatasetItem[]>[
     {
       name: 'Calories consumed',
-      series: calorieData,
+      series: dataLists.value.caloriesList,
       color: '#baff79ff',
       type: 'line',
       shape: 'circle',
@@ -365,8 +610,8 @@ const getCalorieDataset = () => {
     },
     {
       name: 'Consumed goal',
-      series: goalData,
-      color: '#e5ffcc',
+      series: dataLists.value.caloriesGoalList,
+      color: '#caff99',
       type: 'line',
       shape: 'triangle',
       useArea: false,
@@ -381,7 +626,7 @@ const getCalorieDataset = () => {
   if (user.value.goals.daily_calorie_burn_target > 0) {
     retDataset.push({
       name: 'Calories burned',
-      series: burnedData,
+      series: dataLists.value.burnedList,
       color: '#5affc3ff',
       type: 'line',
       shape: 'circle',
@@ -394,8 +639,8 @@ const getCalorieDataset = () => {
     },
     {
       name: 'Burned goal',
-      series: burnedGoalData,
-      color: '#ccffec',
+      series: dataLists.value.burnedGoalList,
+      color: '#99ffda',
       type: 'line',
       shape: 'triangle',
       useArea: false,
@@ -416,19 +661,10 @@ const getMacronutrientsDataset = () => {
     return []
   }
 
-  const history = foodLogHistory.slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length)
-
-  const proteinData = history.map((x) => x.protein)
-  const fatData = history.map((x) => x.fat)
-  const carbsData = history.map((x) => x.carbs)
-  const proteinGoalData = history.map((x) => x.goalProtein)
-  const fatGoalData = history.map((x) => x.goalFat)
-  const carbsGoalData = history.map((x) => x.goalCarbs)
-
   return <VueUiXyDatasetItem[]>[
     {
       name: 'Fat',
-      series: fatData,
+      series: dataLists.value.fatList,
       color: '#97e6ff',
       type: 'line',
       shape: 'circle',
@@ -441,7 +677,7 @@ const getMacronutrientsDataset = () => {
     },
     {
       name: 'Fat goal',
-      series: fatGoalData,
+      series: dataLists.value.fatGoalList,
       color: '#ccf3ff',
       type: 'line',
       shape: 'triangle',
@@ -454,7 +690,7 @@ const getMacronutrientsDataset = () => {
     },
     {
       name: 'Carbohydrates',
-      series: carbsData,
+      series: dataLists.value.carbsList,
       color: '#7b11fd',
       type: 'line',
       shape: 'circle',
@@ -467,7 +703,7 @@ const getMacronutrientsDataset = () => {
     },
     {
       name: 'Carbohydrates goal',
-      series: carbsGoalData,
+      series: dataLists.value.carbsGoalList,
       color: '#e3cdfe',
       type: 'line',
       shape: 'triangle',
@@ -480,7 +716,7 @@ const getMacronutrientsDataset = () => {
     },
     {
       name: 'Protein',
-      series: proteinData,
+      series: dataLists.value.proteinList,
       color: '#ff4492ff',
       type: 'line',
       shape: 'circle',
@@ -493,7 +729,7 @@ const getMacronutrientsDataset = () => {
     },
     {
       name: 'Protein goal',
-      series: proteinGoalData,
+      series: dataLists.value.proteinGoalList,
       color: '#ffcce1',
       type: 'line',
       shape: 'triangle',
@@ -505,12 +741,6 @@ const getMacronutrientsDataset = () => {
       useTag: 'none',
     },
   ]
-}
-
-const getFoodLogXAxisLabels = () => {
-  const xAxisData = foodLogHistory ? foodLogHistory.map((x) => x.date).slice(dateRangeChartSelectorLookup[dateRangeChartSelector.value], foodLogHistory.length) : []
-
-  return xAxisData
 }
 
 const loadUserData = async () => {
@@ -558,9 +788,10 @@ const loadLogData = async () => {
       activityLogHistory.reverse()
     }
 
+    await updateListsAndAverages()
     calorieDataset.value = getCalorieDataset()
     macronutrientsDataset.value = getMacronutrientsDataset()
-    foodLogXAxisLabels.value = getFoodLogXAxisLabels()
+
   } catch (err) {
     console.error('Error loading users log data:', err)
     if (err instanceof Error) {
@@ -623,7 +854,6 @@ async function prepFoodLogsData(foodLogs: FoodLog[]): Promise<LocalFoodLogHistor
   if (!foodLogs[0]) {
     return []
   }
-
   const result: LocalFoodLogHistory[] = [await createLocalFoodLogHistoryFromFoodLog(foodLogs[0])]
 
   for (let i = 1; i < foodLogs.length; i++) {
@@ -758,8 +988,8 @@ async function createLocalActivityLogHistoryFromActivityLog(
 }
 
 onMounted(async () => {
-  loadUserData()
-  loadLogData()
+  await loadUserData()
+  await loadLogData()
 })
 </script>
 
@@ -834,6 +1064,7 @@ onMounted(async () => {
 .weight-kpis-second-row,
 .weight-kpis-third-row,
 .calories-kpis-first-row,
+.calories-kpis-second-row,
 .macronutrients-kpis-first-row,
 .macronutrients-kpis-second-row,
 .macronutrients-kpis-third-row {
@@ -855,6 +1086,9 @@ onMounted(async () => {
 
 .kpi.calorie div {
   background-color: #d6ffb0;
+}
+.kpi.burned div {
+  background-color: #5affc3ff;
 }
 .kpi.fat div {
   background-color: #97e6ff;

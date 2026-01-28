@@ -220,8 +220,8 @@ const config = computed(() => {
             showOnlyFirstAndLast: props.minimalLabels,
             showOnlyAtModulo: false,
             modulo: 12,
-            yOffset: 8,
-            rotation: 0,
+            yOffset: 6,
+            rotation: props.xAxisRotation,
             autoRotate: {
               enable: true,
               angle: -40,
@@ -520,11 +520,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  xAxisRotation: {
+    type: Number,
+    default: 0,
+  }
 })
+
 </script>
 <template>
   <!-- Using a wrapper is optional -->
   <div :style="{ width: '100%' }">
-    <VueUiXy :config="config" :dataset="props.dataset" />
+    <VueUiXy :config="config" :dataset="dataset" />
   </div>
 </template>

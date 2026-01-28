@@ -140,7 +140,6 @@ class ActivityLogService:
             logger.error("Failed to get activity logs for user '%s': %s", user_id, str(e))
             raise e
 
-
     async def add_activity_entry(self, user_id: str, log_date: date, activity_entry: ActivityEntry
                                  ) -> ActivityEntry:
         """
