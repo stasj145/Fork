@@ -58,7 +58,7 @@ async function saveFood(updatedFood: Food) {
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
     }
-    const results: Food = await fetchWrapper.post('/api/v1/food/', updatedFood)
+    const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
     selectedFood.value = results
   } catch (err) {
     if (err instanceof Error) {

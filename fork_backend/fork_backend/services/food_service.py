@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor  # pylint: disable=no-name-in-module
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, desc, func
 from sqlalchemy.orm import selectinload
 from sentence_transformers import SentenceTransformer
 import openfoodfacts
@@ -14,6 +14,8 @@ from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
 from fork_backend.models.food_sources import Sources
+from fork_backend.models.food_log import FoodLog
+from fork_backend.models.food_entry import FoodEntry
 
 log = get_logger()
 
@@ -509,3 +511,51 @@ class FoodService:
             log.error("Failed to delete food_item with id '%s': %s",
                       food_item_id, e)
             raise e
+
+    async def get_last_logged(self, n_items: int, user_id: str) -> list[FoodItem]:
+        """
+        Docstring for get_last_logged
+        
+        :param n_items: Max number of food items to return
+        :type n_items: int
+        :param user_id: Id of user for which to get the items
+        :type user_id: str
+        :return: Deduplicated list of last logged food items with max lenght n_items
+        :rtype: list[FoodItem]
+        """
+
+        try:
+            async with get_async_db() as db:
+
+                last_eaten_subquery = (
+                    select(
+                        FoodEntry.food_id.label("f_id"),
+                        func.max(FoodLog.date).label("max_date")
+                    )
+                    .join(FoodLog)
+                    .filter(FoodLog.user_id == user_id)
+                    .group_by(FoodEntry.food_id)
+                    .subquery()
+                )
+
+                stmt = (select(FoodItem)
+                        .join(last_eaten_subquery, FoodItem.id == last_eaten_subquery.c.f_id)
+                        .order_by(desc(last_eaten_subquery.c.max_date))
+                        .limit(n_items)
+                        .options(
+                            selectinload(FoodItem.ingredients)
+                            .selectinload(FoodItemIngredient.ingredient)))
+                
+
+                results = await db.execute(stmt)
+
+                food_items = results.scalars().all()
+
+                return food_items
+    
+        except Exception as e:
+            log.error("Failed to load last %s food_items from user with id '%s': %s",
+                    n_items, user_id, e)
+            raise e
+
+        return []

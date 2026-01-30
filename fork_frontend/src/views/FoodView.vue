@@ -34,7 +34,27 @@
         </button>
       </div>
       <div class="results-root">
-        <span class="no-results-text" v-if="!showResults">Search for a food to start...</span>
+        <div class="no-results" v-if="!showResults">
+          <span class="no-results-text" >Search for a food to start...</span>
+          <div class="last-logged-results-container">
+            <span class="last-logged-results-container-heading">Recent food</span>
+            <div v-if="loadingLastLogged" class="results-loading">Loading recently logged food...</div>
+            <div v-else-if="lastLoggedFood.length > 0" class="results-list">
+              <div
+                v-for="food in lastLoggedFood"
+                :key="food.id"
+                class="result-item"
+                @click="selectFood(food)"
+              >
+                <div class="food-name">{{ food.name }}</div>
+                <div class="food-summary-details">
+                  <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                </div>
+              </div>
+            </div>
+            <span v-else>No recent food found</span>
+          </div>
+        </div>
         <div class="results-container" v-if="showResults">
           <div v-if="loading" class="results-loading">Searching...</div>
           <div v-else-if="searchResults.length > 0" class="results-list">
@@ -50,6 +70,7 @@
               </div>
             </div>
           </div>
+          <span v-else>Nothing found</span>
         </div>
       </div>
       <div class="button-root">
@@ -79,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import type { Food } from '@/types/food'
 import { createEmptyFood } from '@/types/food'
@@ -94,8 +115,11 @@ import BarcodeScanner from '@/components/BarcodeScanner.vue'
 const searchQuery = ref('')
 const searchCode = ref('')
 const searchResults = ref<Food[]>([])
+const lastLoggedFood = ref<Food[]>([])
 const loading = ref(false)
+const loadingLastLogged = ref(false)
 const showResults = ref(false)
+const showResultsLastLogged = ref(false)
 const debounceTimer = ref<number | null>(null)
 const selectedFood = ref<Food | null>(null)
 const addMode = ref(false)
@@ -189,6 +213,21 @@ const performSearch = async () => {
   }
 }
 
+const getLastLoggedFood = async () => {
+  loadingLastLogged.value = true
+  showResultsLastLogged.value = true
+
+  try {
+    const results = await fetchWrapper.get(`/api/v1/food/last_logged?n_items=20`)
+    lastLoggedFood.value = results || []
+  } catch (error) {
+    console.error('Search error:', error)
+    lastLoggedFood.value = []
+  } finally {
+    loadingLastLogged.value = false
+  }
+}
+
 const clearSearch = () => {
   searchQuery.value = ''
   clearResults()
@@ -230,6 +269,10 @@ const openBarcodeScanner = () => {
 const ingredientModeBack = async () => {
   emits('close-add-ingredients')
 }
+
+onMounted(async () => {
+  getLastLoggedFood()
+})
 </script>
 
 <style lang="css" scoped>
@@ -362,12 +405,49 @@ const ingredientModeBack = async () => {
   align-items: center;
 }
 
+.no-results{
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+
+}
+
+.last-logged-results-container {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  justify-content: start;
+  width: 100%;
+  border: 1px solid var(--color-accent-secondary);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.last-logged-results-container-heading {
+  color: var(--color-text-heading);
+  background-color: var(--color-background-secondary);
+  font-weight: bold;
+  position: relative;
+  bottom: 2rem;
+  left: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-bottom: -1rem;
+  z-index: 10;
+  font-size: 2rem;
+  width: fit-content;
+}
+
 .results-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: start;
   width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .results-list {
@@ -375,12 +455,10 @@ const ingredientModeBack = async () => {
   flex-direction: column;
   align-items: start;
   width: 100%;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  gap: 0.3rem;
 }
 
 .result-item {
-  margin-bottom: 0.3rem;
   width: 100%;
   padding: 0.15rem;
   padding-left: 0.5rem;

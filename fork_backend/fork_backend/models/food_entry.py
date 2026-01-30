@@ -15,9 +15,9 @@ class FoodEntry(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid4()))
     log_id: Mapped[str] = mapped_column(
-        ForeignKey("food_logs.id"), nullable=False)
+        ForeignKey("food_logs.id"), nullable=False, index=True)
     food_id: Mapped[str] = mapped_column(
-        ForeignKey("food_items.id"), nullable=False)
+        ForeignKey("food_items.id"), nullable=False, index=True)
 
     quantity: Mapped[float] = mapped_column(
         Float, nullable=False) 

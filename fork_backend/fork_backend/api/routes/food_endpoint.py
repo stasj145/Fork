@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Query
 
 from fork_backend.core.logging import get_logger
 from fork_backend.api.dependencies import get_current_user
@@ -46,7 +46,7 @@ def verify_ownership(action: str, user: User, food_item: FoodItem, allow_edit_pu
 
 # --- Endpoints ---
 
-@router.post("/", response_model=FoodDetailed, status_code=status.HTTP_201_CREATED)
+@router.post("/item", response_model=FoodDetailed, status_code=status.HTTP_201_CREATED)
 async def create_food(food_info: FoodCreate, user: User = Depends(get_current_user)):
     """
     Create a new food item.
@@ -66,7 +66,7 @@ async def create_food(food_info: FoodCreate, user: User = Depends(get_current_us
         ) from e
 
 
-@router.patch("/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
+@router.patch("/item/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
 async def update_food(food_id: str, food_info: FoodUpdate,
                       current_user: User = Depends(get_current_user)) -> FoodDetailed:
     """
@@ -107,7 +107,7 @@ async def update_food(food_id: str, food_info: FoodUpdate,
         ) from e
 
 
-@router.get("/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
+@router.get("/item/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
 async def get_food_item(food_id: str, current_user: User = Depends(get_current_user)) -> FoodDetailed:
     """
     Get a specific food item by ID.
@@ -151,7 +151,7 @@ async def search_food(query: FoodSearch, user: User = Depends(get_current_user))
         ) from e
 
 
-@router.delete("/{food_id}", status_code=status.HTTP_200_OK)
+@router.delete("/item/{food_id}", status_code=status.HTTP_200_OK)
 async def delete_food(food_id: str, current_user: User = Depends(get_current_user)):
     """
     Delete a specific food item by ID.
@@ -182,4 +182,35 @@ async def delete_food(food_id: str, current_user: User = Depends(get_current_use
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to delete food item: {str(e)}",
+        ) from e
+
+
+@router.get("/last_logged", response_model=list[FoodDetailed], status_code=status.HTTP_200_OK)
+async def get_last_logged(n_items: int = Query(...),
+                          current_user: User = Depends(get_current_user)):
+    """
+    Get the last logged food items
+
+    :param n_items: Number of items to return
+    :type n_items: int
+    :return: List of last logged food items
+    :rtype: List[FoodDetailed]
+    """
+    try:
+        service = FoodService()
+        food_items = await service.get_last_logged(
+            n_items=n_items,
+            user_id=current_user.id)
+
+        return [FoodDetailed.model_validate(food_item) for food_item in food_items]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("Failed to get last %s logged Food items for user with id '%s': %s",
+                  n_items, current_user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get {n_items} last logged Food items for user with id " + \
+                f"'{current_user.id}': {str(e)}",
         ) from e

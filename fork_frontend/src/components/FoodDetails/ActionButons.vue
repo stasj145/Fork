@@ -128,11 +128,11 @@ async function saveFood(updatedFood: Food) {
       updatedFood.barcode = null
     }
     if (creationMode.value) {
-      const results: Food = await fetchWrapper.post('/api/v1/food/', updatedFood)
+      const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
       creationMode.value = false
       selectedFood.value = results
     } else {
-      const results: Food = await fetchWrapper.patch(`/api/v1/food/${updatedFood.id}`, updatedFood)
+      const results: Food = await fetchWrapper.patch(`/api/v1/food/item/${updatedFood.id}`, updatedFood)
       selectedFood.value = results
     }
   } catch (err) {
@@ -155,7 +155,7 @@ async function deleteFood(foodToDelete: Food) {
   }
   deleting.value = true
   try {
-    await fetchWrapper.delete(`/api/v1/food/${foodToDelete.id}`)
+    await fetchWrapper.delete(`/api/v1/food/item/${foodToDelete.id}`)
   } catch (err) {
     if (err instanceof Error) {
       showDeletionError.value = true
