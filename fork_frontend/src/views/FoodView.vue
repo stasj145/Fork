@@ -507,6 +507,11 @@ onMounted(async () => {
     min-height: calc(var(--main-content-height) - 1rem);
   }
 
+  .last-logged-results-container-heading {
+    font-size: 1.5rem;
+    bottom: 1.6rem;
+  }
+
   .button-root {
     bottom: 1rem;
   }
