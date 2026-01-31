@@ -81,6 +81,8 @@ class FoodInDB(FoodBase):
     hidden: bool = Field(..., examples=[False])
     barcode: Optional[str] = Field(
         None, max_length=50, examples=["0123456789123"])
+    img_name: Optional[str] = Field(None, max_length=40,
+                                    examples=["123e4567-e89b-12d3-a456-426614174000.jpg"])
 
 class FoodDetailed(FoodInDB):
     """

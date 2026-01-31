@@ -545,14 +545,14 @@ class FoodService:
                         .options(
                             selectinload(FoodItem.ingredients)
                             .selectinload(FoodItemIngredient.ingredient)))
-                
+
 
                 results = await db.execute(stmt)
 
                 food_items = results.scalars().all()
 
                 return food_items
-    
+
         except Exception as e:
             log.error("Failed to load last %s food_items from user with id '%s': %s",
                     n_items, user_id, e)

@@ -31,6 +31,8 @@ services:
       - FORK_POSTGRES_URL=fork_postgres
     networks:
       - fork_net
+     volumes:
+      - fork_img_data:/app/images
     depends_on:
       fork_postgres:
         condition: service_healthy
@@ -48,6 +50,7 @@ services:
 
 volumes:
   postgres_data:
+  fork_img_data:
 
 networks:
   fork_net:

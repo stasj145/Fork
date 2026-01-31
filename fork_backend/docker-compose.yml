@@ -32,6 +32,8 @@ services:
       - FORK_POSTGRES_URL=fork_postgres
     ports:
       - 8000:8000
+    volumes:
+      - fork_img_data:/app/images
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,3 +41,4 @@ services:
 
 volumes:
   postgres_data:
+  fork_img_data:

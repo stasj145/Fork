@@ -26,6 +26,7 @@ class FoodItem(Base):
         String(1000), nullable=True)
     barcode: Mapped[str | None] = mapped_column(
         String(50), nullable=True, index=True, unique=True)
+    img_name: Mapped[str] = mapped_column(String(40), nullable=True, default=None)
 
     # Nutritional facts per serving
     serving_size: Mapped[float] = mapped_column(Float, nullable=False)
