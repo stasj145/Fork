@@ -7,6 +7,43 @@
         v-model="selectedMaskType"
       ></SegmentedControl>
     </div>
+    <div class="food-img-container" v-if="isEditingMode || selectedFood.img_name">
+      <div class="food-img-placeholder" v-if="!selectedFood.img_name">
+        <IconImagePlaceholder></IconImagePlaceholder>
+      </div>
+      <img :src="imageSrc" alt="Food Image" v-if="selectedFood.img_name && imageSrc" />
+      <div class="food-img-actions" v-if="isEditingMode">
+        <input
+          class="food-img-input"
+          type="file"
+          accept="image/jpeg, image/png"
+          @change="handleFileChanged"
+          capture
+        />
+        <ErrorModal
+          v-model="showUpdatingError"
+          title="Updating Error"
+          message="Unable to update image."
+          :details="errorDetails"
+        ></ErrorModal>
+        <button
+          class="food-img-delete"
+          :class="{ 'btn-delete-awaiting-confirmation': deleteConfirmed }"
+          @click="deleteImage"
+        >
+          <span v-if="!deleting">Delete image</span>
+          <div v-else class="food-img-delete-spinner">
+            <Spinner></Spinner>
+          </div>
+          <ErrorModal
+            v-model="showDeletionError"
+            title="Deletion Error"
+            message="Unable to delete image."
+            :details="errorDetails"
+          ></ErrorModal>
+        </button>
+      </div>
+    </div>
     <div class="food-info">
       <div class="food-info-item">
         <label>Name</label>
@@ -199,7 +236,7 @@
 
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Food, Ingredient } from '@/types/food'
 import SparkbarChart from '@/components/SparkbarChart.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
@@ -207,8 +244,18 @@ import ToggleSwitch from '../ToggleSwitch.vue'
 import IconAdd from '../icons/IconAdd.vue'
 import FoodItemSummary from '../FoodItemSummary.vue'
 import SegmentedControl from '../SegmentedControl.vue'
+import IconImagePlaceholder from '../icons/IconImagePlaceholder.vue'
+import { fetchWrapper } from '@/helpers/fetch-wrapper'
+import Spinner from '../Spinner.vue'
+import ErrorModal from '../ErrorModal.vue'
 
+const deleteConfirmed = ref<boolean>(false)
+const deleting = ref<boolean>(false)
+const showDeletionError = ref<boolean>(false)
+const showUpdatingError = ref<boolean>(false)
+const errorDetails = ref<string>('N/A')
 const selectedMaskType = ref<string>('Advanced')
+const imageSrc = ref<string>('')
 
 const selectedFood = defineModel<Food | null>('selectedFood')
 
@@ -410,6 +457,81 @@ watch(
     }
   },
 )
+
+async function deleteImage() {
+  if (!deleteConfirmed.value) {
+    deleteConfirmed.value = true
+    return
+  }
+
+  deleting.value = true
+  if (!selectedFood.value?.img_name) {
+    deleting.value = false
+    deleteConfirmed.value = false
+    return
+  }
+
+  try {
+    await fetchWrapper.delete(`/api/v1/food/item/${selectedFood.value.id}/image`)
+  } catch (err) {
+    if (err instanceof Error) {
+      showDeletionError.value = true
+      errorDetails.value = err.message || 'N/A'
+    }
+  } finally {
+    deleting.value = false
+    deleteConfirmed.value = false
+  }
+}
+
+async function handleFileChanged($event: Event) {
+  const target = $event.target as HTMLInputElement
+  if (target && target.files) {
+    await updateImage(target.files[0]!)
+  }
+}
+
+async function updateImage(image: File) {
+  if (!image || !selectedFood.value) {
+    return
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('file', image)
+
+    await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
+  } catch (err) {
+    if (err instanceof Error) {
+      showUpdatingError.value = true
+      errorDetails.value = err.message || 'N/A'
+    }
+  } finally {
+    deleteConfirmed.value = false
+  }
+}
+
+async function getImage() {
+  if (!selectedFood.value || !selectedFood.value.img_name) {
+    return
+  }
+
+  try {
+    const imgResp = await fetchWrapper.get(
+      `/api/v1/food/item/${selectedFood.value.id}/image?size=large`,
+    )
+    const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
+    imageSrc.value = URL.createObjectURL(imgBlob)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn('Could not load: ' + err.message)
+    }
+  }
+}
+
+onMounted(async () => {
+  getImage()
+})
 </script>
 
 <style lang="css" scoped>
@@ -432,6 +554,58 @@ watch(
   width: 100%;
   height: 2rem;
   margin-bottom: 0.5rem;
+}
+
+.food-img-container {
+  width: 100%;
+  height: 5rem;
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 0.5rem;
+  justify-content: center;
+}
+
+.food-img-placeholder,
+.food-img {
+  height: 5rem;
+  width: 5rem;
+}
+
+.food-img-placeholder * {
+  color: var(--color-text-secondary);
+}
+
+.food-img-actions {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-evenly;
+  padding-left: 0.5rem;
+}
+
+.food-img-input {
+}
+
+.food-img-delete {
+  height: 2rem;
+  width: 8rem;
+  font-size: 1rem;
+  background-color: var(--color-accent-secondary);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: 0.25rem;
+  background-color: #ffa9a9ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.food-img-delete.btn-delete-awaiting-confirmation {
+  background-color: rgb(255, 0, 0);
+}
+
+.food-img-delete-spinner {
+  height: 1.5rem;
+  width: 1.5rem;
 }
 
 .food-info {

@@ -16,6 +16,7 @@ from fork_backend.models.food_item import FoodItem, FoodItemIngredient
 from fork_backend.models.food_sources import Sources
 from fork_backend.models.food_log import FoodLog
 from fork_backend.models.food_entry import FoodEntry
+from fork_backend.services.image_service import ImageService
 
 log = get_logger()
 
@@ -501,6 +502,10 @@ class FoodService:
                     log.warning(
                         "Unable to find food item with id '%s' for deletion", food_item_id)
                     return False
+                
+                if food_item.img_name:
+                    image_service = ImageService()
+                    image_service.delete(food_item.img_name)
 
                 await db.delete(food_item)
                 await db.commit()

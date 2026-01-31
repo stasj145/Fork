@@ -18,8 +18,8 @@ class ImageService:
 
     ALLOWED_IMG_EXTENSIONS = {"image/jpeg", "image/png"}
     MAX_INPUT_IMG_SIZE = 50 * 1024 * 1024  # 50MB
-    THUMBNAIL_IMG_DIMENSIONS = (200, 200)
-    LARGE_IMG_DIMENSIONS = (2000, 2000)
+    THUMBNAIL_IMG_DIMENSIONS = (80, 80)
+    LARGE_IMG_DIMENSIONS = (500, 500)
     IMAGE_STORE_PATH_LARGE = "./images/"
     IMAGE_STORE_PATH_THUMBNAIL = "./images/thumbnails/"
 
@@ -196,14 +196,15 @@ class ImageService:
         :rtype: Image.Image
         """
 
+        print(image_data.mode)
         if image_data.mode == "P":
             # Convert to RGBA for transparency
             image_data = image_data.convert("RGBA")
 
-        if image_data.mode in ("RGBA"):
+        if image_data.mode == "RGBA":
             background = Image.new("RGB", image_data.size, (255, 255, 255))
-            print(image_data.split())
             background.paste(image_data, mask=image_data.split()[3])
+
             combined_image = background
 
             final_image = combined_image.convert("RGB")
