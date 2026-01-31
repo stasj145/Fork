@@ -132,7 +132,10 @@ async function saveFood(updatedFood: Food) {
       creationMode.value = false
       selectedFood.value = results
     } else {
-      const results: Food = await fetchWrapper.patch(`/api/v1/food/item/${updatedFood.id}`, updatedFood)
+      const results: Food = await fetchWrapper.patch(
+        `/api/v1/food/item/${updatedFood.id}`,
+        updatedFood,
+      )
       selectedFood.value = results
     }
   } catch (err) {

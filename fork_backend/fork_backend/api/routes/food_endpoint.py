@@ -52,7 +52,7 @@ def verify_ownership(action: str, user: User, food_item: FoodItem, allow_edit_pu
 # --- Endpoints ---
 
 
-@router.post("/item", response_model=FoodDetailed, status_code=status.HTTP_201_CREATED)
+@router.post("/item/", response_model=FoodDetailed, status_code=status.HTTP_201_CREATED)
 async def create_food(food_info: FoodCreate, user: User = Depends(get_current_user)):
     """
     Create a new food item.

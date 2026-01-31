@@ -236,7 +236,7 @@
 
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { Food, Ingredient } from '@/types/food'
 import SparkbarChart from '@/components/SparkbarChart.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
