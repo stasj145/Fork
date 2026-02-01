@@ -48,17 +48,6 @@
                 class="result-item"
                 @click="selectFood(food)"
               >
-                <div class="food-img-container">
-                  <img
-                    class="food-img"
-                    :src="food.img_src"
-                    alt="Food Image"
-                    v-if="food.id && food.img_src"
-                  />
-                  <div class="img-placeholder" v-else>
-                    <IconImagePlaceholder></IconImagePlaceholder>
-                  </div>
-                </div>
                 <div class="food-item-text">
                   <div class="food-name">
                     {{ food.name }}
@@ -67,6 +56,14 @@
                   <div class="food-summary-details">
                     <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
                   </div>
+                </div>
+                <div class="food-img-container">
+                  <img
+                    class="food-img"
+                    :src="food.img_src"
+                    alt="Food Image"
+                    v-if="food.id && food.img_src"
+                  />
                 </div>
               </div>
             </div>
@@ -82,17 +79,6 @@
               class="result-item"
               @click="selectFood(food)"
             >
-              <div class="food-img-container">
-                <img
-                  class="food-img"
-                  :src="food.img_src"
-                  alt="Food Image"
-                  v-if="food.id && food.img_src"
-                />
-                <div class="img-placeholder" v-else>
-                  <IconImagePlaceholder></IconImagePlaceholder>
-                </div>
-              </div>
               <div class="food-item-text">
                 <div class="food-name">
                   {{ food.name }}
@@ -101,6 +87,14 @@
                 <div class="food-summary-details">
                   <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
                 </div>
+              </div>
+              <div class="food-img-container">
+                <img
+                  class="food-img"
+                  :src="food.img_src"
+                  alt="Food Image"
+                  v-if="food.id && food.img_src"
+                />
               </div>
             </div>
           </div>
