@@ -488,6 +488,8 @@ async function deleteImage() {
   } finally {
     deleting.value = false
     deleteConfirmed.value = false
+    imageSrc.value = ''
+    selectedFood.value.img_name = undefined
   }
 }
 
@@ -508,6 +510,7 @@ async function updateImage(image: File) {
     formData.append('file', image)
 
     await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
+    selectedFood.value.img_name = 'placeholder'
   } catch (err) {
     if (err instanceof Error) {
       showUpdatingError.value = true

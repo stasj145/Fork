@@ -20,7 +20,7 @@ function request(method: string) {
       headers,
     }
     if (preventCacheRead) {
-      requestOptions["cache"] = "no-store"
+      requestOptions["cache"] = "reload"
     }
 
     if (body) {
