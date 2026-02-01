@@ -55,7 +55,9 @@
                     alt="Food Image"
                     v-if="food.id && food.img_src"
                   />
-                  <IconImagePlaceholder v-else></IconImagePlaceholder>
+                  <div class="img-placeholder" v-else>
+                    <IconImagePlaceholder></IconImagePlaceholder>
+                  </div>
                 </div>
                 <div class="food-item-text">
                   <div class="food-name">
@@ -87,7 +89,9 @@
                   alt="Food Image"
                   v-if="food.id && food.img_src"
                 />
-                <IconImagePlaceholder v-else></IconImagePlaceholder>
+                <div class="img-placeholder" v-else>
+                  <IconImagePlaceholder></IconImagePlaceholder>
+                </div>
               </div>
               <div class="food-item-text">
                 <div class="food-name">
@@ -547,10 +551,15 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.food-img {
+.food-img,
+.img-placeholder {
   height: 2.5rem;
   width: 2.5rem;
   border-radius: 0.25rem;
+}
+
+.img-placeholder * {
+  color: var(--color-text-secondary);
 }
 
 .food-name {
