@@ -18,7 +18,6 @@
           type="file"
           accept="image/jpeg, image/png"
           @change="handleFileChanged"
-          capture
         />
         <ErrorModal
           v-model="showUpdatingError"
