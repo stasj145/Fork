@@ -583,7 +583,7 @@ onMounted(async () => {
   border-radius: 0.5rem;
   padding: 0.5rem;
   width: 100%;
-  height: 12rem;
+  height: 100%;
   box-shadow: 0 0 0.5rem 0 var(--color-accent-primary) inset;
 }
 
@@ -592,8 +592,8 @@ onMounted(async () => {
   width: 10rem;
 }
 .food-img {
-  height: 10rem;
-  width: 10rem;
+  max-height: 10rem;
+  max-width: 10rem;
 }
 
 .food-img {
