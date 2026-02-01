@@ -139,7 +139,6 @@ import IconAdd from '@/components/icons/IconAdd.vue'
 import IconSearch from '@/components/icons/IconSearch.vue'
 import IconBack from '@/components/icons/IconBack.vue'
 import BarcodeScanner from '@/components/BarcodeScanner.vue'
-import IconImagePlaceholder from '@/components/icons/IconImagePlaceholder.vue'
 
 const searchQuery = ref('')
 const searchCode = ref('')
