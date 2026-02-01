@@ -13,12 +13,15 @@
       </div>
       <img :src="imageSrc" alt="Food Image" v-if="selectedFood.img_name && imageSrc" />
       <div class="food-img-actions" v-if="isEditingMode">
-        <input
-          class="food-img-input"
-          type="file"
-          accept="image/jpeg, image/png"
-          @change="handleFileChanged"
-        />
+        <label class="food-img-input-label">
+          Change image
+          <input
+            class="food-img-input"
+            type="file"
+            accept="image/jpeg, image/png"
+            @change="handleFileChanged"
+          />
+        </label>
         <ErrorModal
           v-model="showUpdatingError"
           title="Updating Error"
@@ -582,7 +585,21 @@ onMounted(async () => {
   padding-left: 0.5rem;
 }
 
+.food-img-input-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 8rem;
+  font-size: 1rem;
+  background-color: var(--color-background-tertiary);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
 .food-img-input {
+  display: none;
 }
 
 .food-img-delete {
@@ -590,7 +607,7 @@ onMounted(async () => {
   width: 8rem;
   font-size: 1rem;
   background-color: var(--color-accent-secondary);
-  border: 1px solid var(--color-accent-primary);
+  border: 1px solid var(--color-background-error);
   border-radius: 0.25rem;
   background-color: #ffa9a9ff;
   display: flex;
