@@ -237,8 +237,13 @@ const performSearch = async () => {
     searchResults.value = <Food[]>[]
   } finally {
     for (const foodItem of searchResults.value) {
-      if (!foodItem.id || !foodItem.img_name) continue
-      foodItem.img_src = await getImage(foodItem.id)
+      if (foodItem.img_src || !foodItem.id) continue
+      if (foodItem.external_image_url) {
+        foodItem.img_src = foodItem.external_image_url
+        foodItem.img_name = 'placeholder'
+      } else if (foodItem.img_name) {
+        foodItem.img_src = await getImage(foodItem.id)
+      }
     }
     loading.value = false
     searchCode.value = ''
@@ -308,7 +313,7 @@ const ingredientModeBack = async () => {
 }
 
 async function getImage(foodId: string) {
-  if (!foodId) {
+  if (!foodId || foodId == 'PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB') {
     return
   }
 
@@ -542,12 +547,15 @@ onMounted(async () => {
   height: 2.5rem;
   width: 2.5rem;
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 .food-img,
 .img-placeholder {
-  height: 2.5rem;
-  width: 2.5rem;
+  max-height: 2.5rem;
+  max-width: 2.5rem;
   border-radius: 0.25rem;
 }
 

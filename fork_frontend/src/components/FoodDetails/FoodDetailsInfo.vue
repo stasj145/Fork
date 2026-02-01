@@ -7,7 +7,7 @@
         v-model="selectedMaskType"
       ></SegmentedControl>
     </div>
-    <div class="food-img-container" v-if="isEditingMode || selectedFood.img_name">
+    <div class="food-img-container" v-if="isEditingMode || selectedFood.img_src">
       <div class="food-img-placeholder" v-if="!selectedFood.img_src">
         <IconImagePlaceholder></IconImagePlaceholder>
       </div>
@@ -300,11 +300,9 @@ function createNutrientComputed(nutrient: 'calories' | 'protein' | 'carbs' | 'fa
     get: () => {
       if (!selectedFood.value) return 0
       if (selectedFood.value[perServingKey]) {
-        console.log('Exists')
         return selectedFood.value[perServingKey]
       }
       if (selectedFood.value) {
-        console.log('recalculating')
         if (
           selectedFood.value.serving_size &&
           selectedFood.value.serving_size > 0 &&
@@ -519,9 +517,8 @@ async function updateImage(image: File) {
 }
 
 async function getImage() {
-  if (!selectedFood.value || !selectedFood.value.img_name) {
-    return
-  }
+  if (!selectedFood.value || !selectedFood.value.img_name) return
+  if (selectedFood.value.img_name == 'placeholder') return
 
   try {
     const imgResp = await fetchWrapper.get(
@@ -539,6 +536,11 @@ async function getImage() {
 }
 
 onMounted(async () => {
+  if (selectedFood.value?.external_image_url) {
+    selectedFood.value.img_src = selectedFood.value.external_image_url
+    selectedFood.value.img_name = 'placeholder'
+  }
+
   getImage()
 })
 </script>
@@ -583,8 +585,8 @@ onMounted(async () => {
 
 .food-img-placeholder,
 .food-img {
-  height: 10rem;
-  width: 10rem;
+  max-height: 10rem;
+  max-width: 10rem;
 }
 
 .food-img {

@@ -384,6 +384,7 @@ class FoodService:
                 "carbohydrates_100g", 0),
             fat_per_100=response.get("nutriments", {}).get("fat_100g", 0),
         )
+        new_food_item.external_image_url = response.get("image_small_url", None)
         return new_food_item
 
     async def semantic_search_food_items_local(
@@ -505,7 +506,7 @@ class FoodService:
                 
                 if food_item.img_name:
                     image_service = ImageService()
-                    image_service.delete(food_item.img_name)
+                    await image_service.delete(food_item.img_name)
 
                 await db.delete(food_item)
                 await db.commit()

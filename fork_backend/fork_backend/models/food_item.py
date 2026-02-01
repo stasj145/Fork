@@ -51,6 +51,16 @@ class FoodItem(Base):
         cascade="all, delete-orphan"
     )
 
+    # ephemeral property
+    @property
+    def external_image_url(self) -> str | None:
+        """Url to externally hosted image. Not persisted to db"""
+        return getattr(self, "_ext_image_url", None)
+
+    @external_image_url.setter
+    def external_image_url(self, value):
+        self._ext_image_url = value
+
 
 class FoodItemIngredient(Base):
     """Association model linking FoodItems to their sub-items with quantity"""

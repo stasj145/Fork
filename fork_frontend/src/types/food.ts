@@ -12,6 +12,7 @@ export interface Food {
   barcode: string | null
   img_name?: string
   img_src?: string
+  external_image_url?: string
   private: boolean
   hidden: boolean
   description: string

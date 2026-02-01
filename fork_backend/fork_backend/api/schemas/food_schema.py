@@ -92,6 +92,7 @@ class FoodDetailed(FoodInDB):
         default_factory=list, 
         description="All, if any, ingredients of the food. Max one level of recurion"
     )
+    external_image_url: Optional[str] = Field(None, examples=["https://images.openfoodfacts.org/images/products/000/005/402/2263/front_en.11.200.jpg"])
 
 class FoodSearch(ForkBaseSchema):
     """Properties for searching for food"""

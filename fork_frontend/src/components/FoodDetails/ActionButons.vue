@@ -123,7 +123,6 @@ function emitAddOrEatMode() {
 async function saveFood(updatedFood: Food) {
   deleteConfirmed.value = false
   saving.value = true
-  console.log(updatedFood)
   try {
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
@@ -141,6 +140,19 @@ async function saveFood(updatedFood: Food) {
       results.img_src = updatedFood.img_src
       selectedFood.value = results
     }
+
+    if (updatedFood.external_image_url) {
+      const externalImg = await fetch(updatedFood.external_image_url)
+
+      const imageBlob = await externalImg.blob()
+      const file = new File([imageBlob], 'external.jpg', { type: imageBlob.type })
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
+      selectedFood.value.img_name = 'out_of_sync_with_db_but_exists'
+    }
   } catch (err) {
     if (err instanceof Error) {
       showSavingError.value = true
@@ -148,10 +160,30 @@ async function saveFood(updatedFood: Food) {
     }
   } finally {
     saving.value = false
-    console.log(selectedFood.value)
+    getImage()
   }
   if (!showSavingError.value) {
     toggleEditing()
+  }
+}
+
+async function getImage() {
+  if (!selectedFood.value || !selectedFood.value.img_name) {
+    return
+  }
+
+  try {
+    const imgResp = await fetchWrapper.get(
+      `/api/v1/food/item/${selectedFood.value.id}/image?size=large`,
+      undefined, // no body
+      true, // Prevent Cache Read
+    )
+    const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
+    selectedFood.value.img_src = URL.createObjectURL(imgBlob)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn('Could not load: ' + err.message)
+    }
   }
 }
 
