@@ -11,7 +11,12 @@
       <div class="food-img-placeholder" v-if="!selectedFood.img_name">
         <IconImagePlaceholder></IconImagePlaceholder>
       </div>
-      <img :src="imageSrc" alt="Food Image" v-if="selectedFood.img_name && imageSrc" />
+      <img
+        class="food-img"
+        :src="imageSrc"
+        alt="Food Image"
+        v-if="selectedFood.img_name && imageSrc"
+      />
       <div class="food-img-actions" v-if="isEditingMode">
         <label class="food-img-input-label">
           Change image
@@ -511,6 +516,9 @@ async function updateImage(image: File) {
   } finally {
     deleteConfirmed.value = false
   }
+  if (!showUpdatingError.value) {
+    await getImage() //reload
+  }
 }
 
 async function getImage() {
@@ -521,6 +529,8 @@ async function getImage() {
   try {
     const imgResp = await fetchWrapper.get(
       `/api/v1/food/item/${selectedFood.value.id}/image?size=large`,
+      undefined, // no body
+      true, // Prevent Cache Read
     )
     const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
     imageSrc.value = URL.createObjectURL(imgBlob)
@@ -565,12 +575,23 @@ onMounted(async () => {
   flex-direction: row;
   margin-bottom: 0.5rem;
   justify-content: center;
+  align-items: center;
+  border: 1px solid var(--color-accent-secondary);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  width: 100%;
+  height: fit-content;
+  box-shadow: 0 0 0.5rem 0 var(--color-accent-primary) inset;
 }
 
 .food-img-placeholder,
 .food-img {
-  height: 5rem;
-  width: 5rem;
+  height: 10rem;
+  width: 10rem;
+}
+
+.food-img {
+  border-radius: 0.5rem;
 }
 
 .food-img-placeholder * {
@@ -581,7 +602,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  justify-content: space-evenly;
+  gap: 0.5rem;
   padding-left: 0.5rem;
 }
 

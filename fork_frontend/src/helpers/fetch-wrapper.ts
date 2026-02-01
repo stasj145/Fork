@@ -9,7 +9,7 @@ export const fetchWrapper = {
 }
 
 function request(method: string) {
-  return (url: string, body?: string | object | FormData): Promise<any> => {
+  return (url: string, body?: string | object | FormData, preventCacheRead: boolean = false): Promise<any> => {
 
     const headers: Record<string, string> = {
       ...authHeader(url), // Spread the auth header
@@ -18,6 +18,9 @@ function request(method: string) {
     const requestOptions: RequestInit = {
       method,
       headers,
+    }
+    if (preventCacheRead) {
+      requestOptions["cache"] = "no-store"
     }
 
     if (body) {

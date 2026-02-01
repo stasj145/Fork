@@ -196,7 +196,6 @@ class ImageService:
         :rtype: Image.Image
         """
 
-        print(image_data.mode)
         if image_data.mode == "P":
             # Convert to RGBA for transparency
             image_data = image_data.convert("RGBA")
