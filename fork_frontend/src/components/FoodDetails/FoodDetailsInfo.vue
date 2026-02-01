@@ -504,8 +504,11 @@ async function updateImage(image: File) {
     const formData = new FormData()
     formData.append('file', image)
 
-    await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
-    selectedFood.value.img_name = 'placeholder'
+    const response = await fetchWrapper.put(
+      `/api/v1/food/item/${selectedFood.value.id}/image`,
+      formData,
+    )
+    selectedFood.value.img_name = response['name']
   } catch (err) {
     if (err instanceof Error) {
       showUpdatingError.value = true

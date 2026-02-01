@@ -150,8 +150,11 @@ async function saveFood(updatedFood: Food) {
       const formData = new FormData()
       formData.append('file', file)
 
-      await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
-      selectedFood.value.img_name = 'out_of_sync_with_db_but_exists'
+      const response = await fetchWrapper.put(
+        `/api/v1/food/item/${selectedFood.value.id}/image`,
+        formData,
+      )
+      selectedFood.value.img_name = response['name']
     }
   } catch (err) {
     if (err instanceof Error) {

@@ -11,6 +11,7 @@ from fork_backend.services.food_service import FoodService
 from fork_backend.services.image_service import ImageService
 from fork_backend.api.schemas.food_schema import (
     FoodDetailed, FoodCreate, FoodUpdate, FoodSearch)
+from fork_backend.api.schemas.image_schema import RequestImage
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
 from fork_backend.models.user import User
 from fork_backend.models.image_sizes import ImageSize
@@ -231,7 +232,7 @@ async def get_last_logged(n_items: int = Query(...),
         ) from e
 
 
-@router.put("/item/{food_id}/image", status_code=status.HTTP_200_OK)
+@router.put("/item/{food_id}/image", response_model=RequestImage, status_code=status.HTTP_200_OK)
 async def update_food_image(food_id: str, file: UploadFile = File(...),
                             current_user: User = Depends(get_current_user)):
     """
@@ -281,6 +282,8 @@ async def update_food_image(food_id: str, file: UploadFile = File(...),
 
         if old_filename:
             await image_service.delete(image_name=old_filename)
+
+        return RequestImage(name=filename)
 
     except HTTPException:
         raise
