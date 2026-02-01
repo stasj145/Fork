@@ -123,12 +123,14 @@ function emitAddOrEatMode() {
 async function saveFood(updatedFood: Food) {
   deleteConfirmed.value = false
   saving.value = true
+  console.log(updatedFood)
   try {
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
     }
     if (creationMode.value) {
       const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
+      results.img_src = updatedFood.img_src
       creationMode.value = false
       selectedFood.value = results
     } else {
@@ -136,6 +138,7 @@ async function saveFood(updatedFood: Food) {
         `/api/v1/food/item/${updatedFood.id}`,
         updatedFood,
       )
+      results.img_src = updatedFood.img_src
       selectedFood.value = results
     }
   } catch (err) {
@@ -145,6 +148,7 @@ async function saveFood(updatedFood: Food) {
     }
   } finally {
     saving.value = false
+    console.log(selectedFood.value)
   }
   if (!showSavingError.value) {
     toggleEditing()

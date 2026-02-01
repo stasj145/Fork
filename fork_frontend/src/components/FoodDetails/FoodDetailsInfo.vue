@@ -8,15 +8,10 @@
       ></SegmentedControl>
     </div>
     <div class="food-img-container" v-if="isEditingMode || selectedFood.img_name">
-      <div class="food-img-placeholder" v-if="!selectedFood.img_name">
+      <div class="food-img-placeholder" v-if="!selectedFood.img_src">
         <IconImagePlaceholder></IconImagePlaceholder>
       </div>
-      <img
-        class="food-img"
-        :src="imageSrc"
-        alt="Food Image"
-        v-if="selectedFood.img_name && imageSrc"
-      />
+      <img class="food-img" :src="selectedFood.img_src" alt="Food Image" v-else />
       <div class="food-img-actions" v-if="isEditingMode">
         <label class="food-img-input-label">
           Change image
@@ -262,7 +257,6 @@ const showDeletionError = ref<boolean>(false)
 const showUpdatingError = ref<boolean>(false)
 const errorDetails = ref<string>('N/A')
 const selectedMaskType = ref<string>('Advanced')
-const imageSrc = ref<string>('')
 
 const selectedFood = defineModel<Food | null>('selectedFood')
 
@@ -488,7 +482,7 @@ async function deleteImage() {
   } finally {
     deleting.value = false
     deleteConfirmed.value = false
-    imageSrc.value = ''
+    selectedFood.value.img_src = ''
     selectedFood.value.img_name = undefined
   }
 }
@@ -536,7 +530,7 @@ async function getImage() {
       true, // Prevent Cache Read
     )
     const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
-    imageSrc.value = URL.createObjectURL(imgBlob)
+    selectedFood.value.img_src = URL.createObjectURL(imgBlob)
   } catch (err) {
     if (err instanceof Error) {
       console.warn('Could not load: ' + err.message)
