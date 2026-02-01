@@ -566,22 +566,16 @@ onMounted(async () => {
   font-size: 1.25rem;
   color: var(--color-text-primary);
   margin-bottom: 0.1rem;
-  text-overflow: clip;
-  white-space: nowrap;
 }
 
 .brand-text {
   color: var(--color-text-secondary);
   font-size: 1rem;
-  text-overflow: clip;
-  white-space: nowrap;
 }
 
 .food-summary-details {
   font-size: 1rem;
   color: var(--color-text-secondary);
-  text-overflow: clip;
-  white-space: nowrap;
 }
 
 .button-root {
