@@ -313,7 +313,7 @@ class FoodService:
         Search for food items in OpenFoodFacts using barcode.
         """
         try:
-            api = openfoodfacts.API(user_agent=OPENFOODFACTS_USER_AGENT)
+            api = openfoodfacts.API(user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
             response = api.product.get(code=code)
             if not response:
                 return []
@@ -341,7 +341,7 @@ class FoodService:
         """
         try:
             api = openfoodfacts.API(
-                user_agent=OPENFOODFACTS_USER_AGENT, country=openfoodfacts.Country.de)
+                user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
             response = api.product.text_search(
                 query=query,
                 page=1,
