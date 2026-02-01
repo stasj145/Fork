@@ -100,50 +100,10 @@
 
       <div v-if="!isEditingMode" class="food-nutrition-display">
         <div class="gauge-chart">
-          <GaugeChart
-            :show-animation="showChartAnimation"
-            :dataset="{
-              value: selectedFood.calories_per_100,
-              min: 0,
-              max: 500,
-              rounding: 0,
-              suffix: ' Kcal/100g',
-              colorMin: '#b3ffb3',
-              colorMax: '#ff0000',
-            }"
-          ></GaugeChart>
+          <GaugeChart :show-animation="showChartAnimation" :dataset="gaugeDataset"></GaugeChart>
         </div>
         <div class="sparkbar-chart">
-          <SparkbarChart
-            :show-animation="showChartAnimation"
-            :dataset="[
-              {
-                name: 'Fat per 100g',
-                value: selectedFood.fat_per_100,
-                color: '#97e6ff',
-                prefix: '',
-                suffix: 'g',
-                rounding: 2,
-              },
-
-              {
-                name: 'Carbs per 100g',
-                value: selectedFood.carbs_per_100,
-                color: '#7b11fd',
-                prefix: '',
-                suffix: 'g',
-                rounding: 2,
-              },
-              {
-                name: 'Protein per 100g',
-                value: selectedFood.protein_per_100,
-                color: '#ff4492ff',
-                prefix: '',
-                suffix: 'g',
-                rounding: 2,
-              },
-            ]"
-          />
+          <SparkbarChart :show-animation="showChartAnimation" :dataset="sparkbarDataset" />
         </div>
       </div>
     </div>
@@ -289,6 +249,49 @@ const vAutoResize = {
 
 const maskTypeAdvanced = computed(() => {
   return selectedMaskType.value == 'Advanced'
+})
+
+const gaugeDataset = computed(() => {
+  return {
+    value: selectedFood.value?.calories_per_100 ?? 0,
+    min: 0,
+    max: 500,
+    rounding: 0,
+    suffix: ' Kcal/100g',
+    colorMin: '#b3ffb3',
+    colorMax: '#ff0000',
+  }
+})
+
+const sparkbarDataset = computed(() => {
+  if (!selectedFood.value) return []
+  return [
+    {
+      name: 'Fat per 100g',
+      value: selectedFood.value.fat_per_100,
+      color: '#97e6ff',
+      prefix: '',
+      suffix: 'g',
+      rounding: 2,
+    },
+
+    {
+      name: 'Carbs per 100g',
+      value: selectedFood.value.carbs_per_100,
+      color: '#7b11fd',
+      prefix: '',
+      suffix: 'g',
+      rounding: 2,
+    },
+    {
+      name: 'Protein per 100g',
+      value: selectedFood.value.protein_per_100,
+      color: '#ff4492ff',
+      prefix: '',
+      suffix: 'g',
+      rounding: 2,
+    },
+  ]
 })
 
 // Helper function to create nutrient computed properties
@@ -542,6 +545,7 @@ onMounted(async () => {
   }
 
   getImage()
+  console.log(selectedFood.value)
 })
 </script>
 
@@ -579,14 +583,17 @@ onMounted(async () => {
   border-radius: 0.5rem;
   padding: 0.5rem;
   width: 100%;
-  height: fit-content;
+  height: 12rem;
   box-shadow: 0 0 0.5rem 0 var(--color-accent-primary) inset;
 }
 
-.food-img-placeholder,
+.food-img-placeholder {
+  height: 10rem;
+  width: 10rem;
+}
 .food-img {
-  max-height: 10rem;
-  max-width: 10rem;
+  height: 10rem;
+  width: 10rem;
 }
 
 .food-img {
@@ -749,6 +756,7 @@ textarea:focus {
 }
 
 .food-nutrition-display .gauge-chart {
+  contain: content;
   width: 100%;
 }
 
