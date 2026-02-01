@@ -11,6 +11,7 @@ export interface Food {
   brand: string
   barcode: string | null
   img_name?: string
+  img_src?: string
   private: boolean
   hidden: boolean
   description: string

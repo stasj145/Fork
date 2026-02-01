@@ -35,10 +35,12 @@
       </div>
       <div class="results-root">
         <div class="no-results" v-if="!showResults">
-          <span class="no-results-text" >Search for a food to start...</span>
+          <span class="no-results-text">Search for a food to start...</span>
           <div class="last-logged-results-container">
             <span class="last-logged-results-container-heading">Recent food</span>
-            <div v-if="loadingLastLogged" class="results-loading">Loading recently logged food...</div>
+            <div v-if="loadingLastLogged" class="results-loading">
+              Loading recently logged food...
+            </div>
             <div v-else-if="lastLoggedFood.length > 0" class="results-list">
               <div
                 v-for="food in lastLoggedFood"
@@ -46,9 +48,23 @@
                 class="result-item"
                 @click="selectFood(food)"
               >
-                <div class="food-name">{{ food.name }}</div>
-                <div class="food-summary-details">
-                  <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                <div class="food-img-container">
+                  <img
+                    class="food-img"
+                    :src="food.img_src"
+                    alt="Food Image"
+                    v-if="food.id && food.img_src"
+                  />
+                  <IconImagePlaceholder v-else></IconImagePlaceholder>
+                </div>
+                <div class="food-item-text">
+                  <div class="food-name">
+                    {{ food.name }}
+                  </div>
+                  <span class="brand-text">{{ food.brand }}</span>
+                  <div class="food-summary-details">
+                    <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -64,9 +80,23 @@
               class="result-item"
               @click="selectFood(food)"
             >
-              <div class="food-name">{{ food.name }}</div>
-              <div class="food-summary-details">
-                <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+              <div class="food-img-container">
+                <img
+                  class="food-img"
+                  :src="food.img_src"
+                  alt="Food Image"
+                  v-if="food.id && food.img_src"
+                />
+                <IconImagePlaceholder v-else></IconImagePlaceholder>
+              </div>
+              <div class="food-item-text">
+                <div class="food-name">
+                  {{ food.name }}
+                </div>
+                <span class="brand-text">{{ food.brand }}</span>
+                <div class="food-summary-details">
+                  <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                </div>
               </div>
             </div>
           </div>
@@ -111,6 +141,7 @@ import IconAdd from '@/components/icons/IconAdd.vue'
 import IconSearch from '@/components/icons/IconSearch.vue'
 import IconBack from '@/components/icons/IconBack.vue'
 import BarcodeScanner from '@/components/BarcodeScanner.vue'
+import IconImagePlaceholder from '@/components/icons/IconImagePlaceholder.vue'
 
 const searchQuery = ref('')
 const searchCode = ref('')
@@ -203,11 +234,15 @@ const performSearch = async () => {
 
   try {
     const results = await fetchWrapper.post(`/api/v1/food/search`, query)
-    searchResults.value = results || []
+    searchResults.value = <Food[]>results || <Food[]>[]
   } catch (error) {
     console.error('Search error:', error)
-    searchResults.value = []
+    searchResults.value = <Food[]>[]
   } finally {
+    for (const foodItem of searchResults.value) {
+      if (!foodItem.id || !foodItem.img_name) continue
+      foodItem.img_src = await getImage(foodItem.id)
+    }
     loading.value = false
     searchCode.value = ''
   }
@@ -224,6 +259,11 @@ const getLastLoggedFood = async () => {
     console.error('Search error:', error)
     lastLoggedFood.value = []
   } finally {
+    for (const foodItem of lastLoggedFood.value) {
+      if (!foodItem.id || !foodItem.img_name) continue
+      foodItem.img_src = await getImage(foodItem.id)
+    }
+
     loadingLastLogged.value = false
   }
 }
@@ -268,6 +308,26 @@ const openBarcodeScanner = () => {
 
 const ingredientModeBack = async () => {
   emits('close-add-ingredients')
+}
+
+async function getImage(foodId: string) {
+  if (!foodId) {
+    return
+  }
+
+  try {
+    const imgResp = await fetchWrapper.get(
+      `/api/v1/food/item/${foodId}/image?size=thumbnail`,
+      undefined, // no body
+      true, // Prevent Cache Read
+    )
+    const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
+    return URL.createObjectURL(imgBlob)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn(`Could not load image for food id ${foodId}: ${err.message}`)
+    }
+  }
 }
 
 onMounted(async () => {
@@ -405,12 +465,11 @@ onMounted(async () => {
   align-items: center;
 }
 
-.no-results{
+.no-results {
   display: flex;
   flex-direction: column;
   width: 100%;
   align-items: center;
-
 }
 
 .last-logged-results-container {
@@ -455,31 +514,65 @@ onMounted(async () => {
   flex-direction: column;
   align-items: start;
   width: 100%;
-  gap: 0.3rem;
 }
 
 .result-item {
   width: 100%;
-  padding: 0.15rem;
-  padding-left: 0.5rem;
-  border: 0.15rem solid var(--color-accent-secondary);
-  border-radius: 0.5rem;
-  background-color: var(--color-background-tertiary);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-item + .result-item {
+  border-top: 1px solid var(--color-accent-secondary);
 }
 
 .result-item:hover {
-  background-color: var(--color-accent-secondary);
+  background-color: var(--color-background-tertiary);
+  cursor: pointer;
+}
+
+.food-item-text {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  width: 100%;
+}
+
+.food-img-container {
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+}
+
+.food-img {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 0.25rem;
 }
 
 .food-name {
   font-size: 1.25rem;
   color: var(--color-text-primary);
   margin-bottom: 0.1rem;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.brand-text {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .food-summary-details {
   font-size: 1rem;
   color: var(--color-text-secondary);
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .button-root {
