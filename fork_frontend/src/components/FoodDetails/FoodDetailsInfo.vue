@@ -7,7 +7,10 @@
         v-model="selectedMaskType"
       ></SegmentedControl>
     </div>
-    <div class="food-img-container" v-if="isEditingMode || selectedFood.img_src">
+    <div
+      class="food-img-container"
+      v-if="(isEditingMode || selectedFood.img_src) && selectedFood.id"
+    >
       <div class="food-img-placeholder" v-if="!selectedFood.img_src">
         <IconImagePlaceholder></IconImagePlaceholder>
       </div>
