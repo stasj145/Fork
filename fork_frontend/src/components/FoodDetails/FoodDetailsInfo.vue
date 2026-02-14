@@ -566,7 +566,6 @@ onMounted(async () => {
   }
 
   getImage()
-  console.log(selectedFood.value)
 })
 </script>
 

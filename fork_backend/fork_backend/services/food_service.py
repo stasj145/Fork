@@ -267,7 +267,7 @@ class FoodService:
                 query=query,
                 user_id=user_id,
                 limit=limit,
-                private_only = True if source == Sources.PERSONAL else False,
+                private_only=True if source == Sources.PERSONAL else False,
                 min_similarity=min_similarity)
         if source == Sources.OPENFOODFACTS and query:
             return await self.semantic_search_food_items_open_food_facts(
@@ -352,7 +352,8 @@ class FoodService:
         Search for food items in OpenFoodFacts using barcode.
         """
         try:
-            api = openfoodfacts.API(user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
+            api = openfoodfacts.API(
+                user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
             response = api.product.get(code=code)
             if not response:
                 return []
@@ -423,7 +424,8 @@ class FoodService:
                 "carbohydrates_100g", 0),
             fat_per_100=response.get("nutriments", {}).get("fat_100g", 0),
         )
-        new_food_item.external_image_url = response.get("image_small_url", None)
+        new_food_item.external_image_url = response.get(
+            "image_small_url", None)
         return new_food_item
 
     async def semantic_search_food_items_local(
@@ -542,7 +544,7 @@ class FoodService:
                     log.warning(
                         "Unable to find food item with id '%s' for deletion", food_item_id)
                     return False
-                
+
                 if food_item.img_name:
                     image_service = ImageService()
                     await image_service.delete(food_item.img_name)
@@ -574,13 +576,13 @@ class FoodService:
         try:
             tandoor_api_client = TandoorAPIClient()
             tandoor_repo = TandoorRepository(tandoor_api_client)
-            
+
             # Search for foods in Tandoor
             food_items = await tandoor_repo.search_recipes(query, user_id, limit)
-            
+
             # Close the connection
             await tandoor_repo.close()
-            
+
             return food_items
         except Exception as e:
             log.error(
@@ -590,7 +592,7 @@ class FoodService:
     async def get_last_logged(self, n_items: int, user_id: str) -> list[FoodItem]:
         """
         Docstring for get_last_logged
-        
+
         :param n_items: Max number of food items to return
         :type n_items: int
         :param user_id: Id of user for which to get the items
@@ -621,7 +623,6 @@ class FoodService:
                             selectinload(FoodItem.ingredients)
                             .selectinload(FoodItemIngredient.ingredient)))
 
-
                 results = await db.execute(stmt)
 
                 food_items = results.scalars().all()
@@ -630,7 +631,7 @@ class FoodService:
 
         except Exception as e:
             log.error("Failed to load last %s food_items from user with id '%s': %s",
-                    n_items, user_id, e)
+                      n_items, user_id, e)
             raise e
 
         return []

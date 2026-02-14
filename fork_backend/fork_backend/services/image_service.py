@@ -85,7 +85,8 @@ class ImageService:
 
     async def validate_process_save_from_url(self, image_url: str) -> str:
         """
-        Fetch image from URL, validate, process and finally save to disk in both large and thumbnail sizes.
+        Fetch image from URL, validate, process and finally save to disk in both large and
+        thumbnail sizes.
 
         :param image_url: The URL of the image to fetch and save
         :type image_url: str
@@ -97,7 +98,7 @@ class ImageService:
             async with httpx.AsyncClient() as client:
                 response = await client.get(image_url)
                 response.raise_for_status()
-                
+
                 # Check content type
                 content_type = response.headers.get('content-type', '')
                 if content_type not in self.ALLOWED_IMG_EXTENSIONS:
@@ -105,38 +106,40 @@ class ImageService:
                                 content_type, self.ALLOWED_IMG_EXTENSIONS)
                     raise Exception(f"Invalid file type. '{content_type}' " +
                                     f"not in {self.ALLOWED_IMG_EXTENSIONS}")
-                
+
                 # Check content size
                 content_length = int(response.headers.get('content-length', 0))
                 if content_length > self.MAX_INPUT_IMG_SIZE:
-                    log.warning("Input file from URL too large. '%s' is larger then max allowed '%s'",
+                    log.warning(
+                        "Input file from URL too large. '%s' is larger then max allowed '%s'",
                                 content_length, self.MAX_INPUT_IMG_SIZE)
                     raise Exception(f"Input file too large. '{content_length}' " +
                                     f"is larger then max allowed '{self.MAX_INPUT_IMG_SIZE}'")
-                
+
                 # Process the image
                 image_data = BytesIO(response.content)
                 image = Image.open(image_data)
-                
+
                 if image.mode in ("P", "RGBA"):
                     image = await self._remove_alpha(image_data=image)
                 else:
                     image = image.convert("RGB")
-                
+
                 # Process the image using existing methods
                 cropped_image = await self._crop(image_data=image)
                 image_tuple = await self._rezise(image_data=cropped_image)
-                
+
                 # Save the image
                 filename: str = await self.save(image_tuple=image_tuple)
                 return filename
-                
+
         except httpx.HTTPError as e:
             log.error("Failed to fetch image from URL: %s", str(e))
             raise Exception(f"Failed to fetch image from URL: {str(e)}") from e
         except Exception as e:
             log.error("Failed to process image from URL: %s", str(e))
-            raise Exception(f"Failed to process image from URL: {str(e)}") from e
+            raise Exception(
+                f"Failed to process image from URL: {str(e)}") from e
 
     async def validate(self, image_data: UploadFile) -> bool:
         """

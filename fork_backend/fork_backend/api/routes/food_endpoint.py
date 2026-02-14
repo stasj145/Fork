@@ -295,7 +295,8 @@ async def update_food_image(food_id: str, file: UploadFile = File(...),
             detail=f"Unable to update food image: {str(e)}",
         ) from e
 
-@router.put("/item/{food_id}/image_from_url", response_model=RequestImage, status_code=status.HTTP_200_OK)
+@router.put("/item/{food_id}/image_from_url", response_model=RequestImage,
+            status_code=status.HTTP_200_OK)
 async def update_food_image_from_url(food_id: str, image_url: ImageUrl,
                             current_user: User = Depends(get_current_user)):
     """

@@ -52,7 +52,8 @@ class FoodCreate(FoodBase):
     private: bool = Field(False, examples=[False])
     hidden: Optional[bool] = Field(None, examples=[False])
     barcode: Optional[str] = Field(None, max_length=50, examples=["0123456789123"])
-    ingredients: Optional[list[FoodIngredientCreate]] = Field(None, description="All, if any, ingredients of the food")
+    ingredients: Optional[list[FoodIngredientCreate]] = Field(
+        None, description="All, if any, ingredients of the food")
 
 
 class FoodUpdate(ForkBaseSchema):
@@ -71,7 +72,8 @@ class FoodUpdate(ForkBaseSchema):
     protein_per_100: Optional[float] = Field(None, examples=[0.3])
     carbs_per_100: Optional[float] = Field(None, examples=[14.4])
     fat_per_100: Optional[float] = Field(None, examples=[0.1])
-    ingredients: Optional[list[FoodIngredientCreate]] = Field(None, description="All, if any, ingredients of the food")
+    ingredients: Optional[list[FoodIngredientCreate]] = Field(
+        None, description="All, if any, ingredients of the food")
 
 
 class FoodInDB(FoodBase):
@@ -89,10 +91,13 @@ class FoodDetailed(FoodInDB):
     Includes ingredients
     """
     ingredients: List[FoodIngredientInDB] = Field(
-        default_factory=list, 
+        default_factory=list,
         description="All, if any, ingredients of the food. Max one level of recurion"
     )
-    external_image_url: Optional[str] = Field(None, examples=["https://images.openfoodfacts.org/images/products/000/005/402/2263/front_en.11.200.jpg"])
+    external_image_url: Optional[str] = Field(
+        None,
+        examples=[
+        "https://images.openfoodfacts.org/images/products/000/005/402/2263/front_en.11.200.jpg"])
 
 class FoodSearch(ForkBaseSchema):
     """Properties for searching for food"""

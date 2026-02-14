@@ -9,21 +9,22 @@ from fork_backend.models.food_item import FoodItem
 
 log = get_logger()
 
+
 class TandoorRepository:
     """Repository for Tandoor food and recipe data operations"""
-    
+
     def __init__(self, api_client: TandoorAPIClient):
         """
         Initialize the Tandoor repository.
-        
+
         :param api_client: Instance of TandoorAPIClient
         """
         self.api_client = api_client
-        
+
     async def search_recipes(self, query: str, user_id: str, limit: int = 20) -> List[FoodItem]:
         """
         Search for recipes in Tandoor and convert them to FoodItem models.
-        
+
         :param query: Search query string
         :param user_id: ID of the user performing the search
         :param limit: Maximum number of results to return
@@ -32,21 +33,22 @@ class TandoorRepository:
         try:
             results = await self.api_client.search_recipes(query, limit)
             recipe_items = []
-            
+
             for item in results:
                 recipe_item = await self._recipe_item_from_tandoor_response(item, user_id)
                 recipe_items.append(recipe_item)
-                
-            log.debug(f"Found {len(recipe_items)} recipes for query: {query}")
+
+            log.debug("Found {len(recipe_items)} recipes for query: %s", query)
             return recipe_items
         except Exception as e:
-            log.error(f"Error searching recipes in Tandoor repository: {e}")
+            log.error("Error searching recipes in Tandoor repository: %s", str(e))
             raise
 
-    async def _recipe_item_from_tandoor_response(self, response: Dict[str, Any], user_id: str) -> FoodItem:
+    async def _recipe_item_from_tandoor_response(self, response: Dict[str, Any], user_id: str
+                                                 ) -> FoodItem:
         """
         Convert a Tandoor API response for a recipe to a FoodItem model.
-        
+
         :param response: Tandoor API response for a recipe
         :param user_id: ID of the user performing the search
         :return: FoodItem object representing the recipe
@@ -92,22 +94,22 @@ class TandoorRepository:
             carbs_per_100=0,
             fat_per_100=0,
         )
-        
+
         # Set external image URL if available
         image_url = None
         if 'image' in response and response['image']:
             image_url = response['image']
-            
+
         if image_url:
             new_recipe_item.external_image_url = image_url
-        
+
         await self._get_recipe_nutrition(recipie_id=tandoor_id, food_item=new_recipe_item)
         return new_recipe_item
 
     async def _get_recipe_nutrition(self, recipie_id: int, food_item: FoodItem) -> FoodItem:
         """
         Get detailed information about a specific recipie
-        
+
         :param recipie_id: Tandoor id of the recipie
         :param food_item: The FoodItem model to update with the nutrition info
         :return: Updated FoodItem Model including nutrition information.
@@ -142,7 +144,8 @@ class TandoorRepository:
                 ingredients = step.get("ingredients", [])
                 for ingredient in ingredients:
                     unit_dict: dict | None = ingredient.get("unit", None)
-                    unit_name: str = unit_dict.get("name", "") if unit_dict else ""
+                    unit_name: str = unit_dict.get(
+                        "name", "") if unit_dict else ""
                     if unit_dict and (unit_name == "g" or unit_name == "ml"):
                         total_weight += ingredient.get("amount", 0)
                     elif ingredient.get("conversions", None):
@@ -156,10 +159,11 @@ class TandoorRepository:
             food_item.protein_per_100 = total_protein/total_weight * 100
 
             food_item.serving_size = round(total_weight/servings, 0)
-            
+
             return food_item
         except Exception as e:
-            log.error("Error updating recipe nutrition info in Tandoor repository: %s", str(e))
+            log.error(
+                "Error updating recipe nutrition info in Tandoor repository: %s", str(e))
             raise e
 
     async def close(self):
