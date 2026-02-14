@@ -153,10 +153,10 @@ class TandoorRepository:
                             if conversion.get("unit", "") == "g":
                                 total_weight += conversion.get("amount", 0)
 
-            food_item.calories_per_100 = total_calories/total_weight * 100
-            food_item.carbs_per_100 = total_carbs/total_weight * 100
-            food_item.fat_per_100 = total_fat/total_weight * 100
-            food_item.protein_per_100 = total_protein/total_weight * 100
+            food_item.calories_per_100 = round(total_calories/total_weight * 100, 2)
+            food_item.carbs_per_100 = round(total_carbs/total_weight * 100, 2)
+            food_item.fat_per_100 = round(total_fat/total_weight * 100, 2)
+            food_item.protein_per_100 = round(total_protein/total_weight * 100, 2)
 
             food_item.serving_size = round(total_weight/servings, 0)
 
