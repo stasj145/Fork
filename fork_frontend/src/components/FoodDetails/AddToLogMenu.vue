@@ -174,14 +174,9 @@ async function saveFood(updatedFood: Food) {
     selectedFood.value = finalFood
 
     if (updatedFood.external_image_url) {
-      const externalImg = await fetch(updatedFood.external_image_url)
-      const imageBlob = await externalImg.blob()
-      const file = new File([imageBlob], 'external.jpg', { type: imageBlob.type })
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      await fetchWrapper.put(`/api/v1/food/item/${finalFood.id}/image`, formData)
+      await fetchWrapper.put(`/api/v1/food/item/${finalFood.id}/image_from_url`, {
+        url: updatedFood.external_image_url,
+      })
     }
   } catch (err) {
     if (err instanceof Error) {
