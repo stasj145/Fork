@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from sentence_transformers import SentenceTransformer
 import openfoodfacts
 
-from fork_backend.core.constants import OPENFOODFACTS_USER_AGENT
+from fork_backend.core.constants import OPENFOODFACTS_USER_AGENT, FOOD_ID_PLACEHOLDER
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
@@ -17,6 +17,10 @@ from fork_backend.models.food_sources import Sources
 from fork_backend.models.food_log import FoodLog
 from fork_backend.models.food_entry import FoodEntry
 from fork_backend.services.image_service import ImageService
+
+# Tandoor integration
+from fork_backend.infrastructure.api_clients.tandoor_api_client import TandoorAPIClient
+from fork_backend.infrastructure.repositories.tandoor_repository import TandoorRepository
 
 log = get_logger()
 
@@ -271,6 +275,12 @@ class FoodService:
                 user_id=user_id,
                 limit=limit,
             )
+        if source == Sources.TANDOOR and query:
+            return await self.semantic_search_food_items_tandoor(
+                query=query,
+                user_id=user_id,
+                limit=limit,
+            )
         if code:
             ret_val = await self.code_search_food_items_local(
                 code=code,
@@ -394,7 +404,7 @@ class FoodService:
     async def _food_item_from_open_food_facts_response(self, response: Dict[str, Any], user_id: str
                                                        ) -> FoodItem:
         new_food_item = FoodItem(
-            id="PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB",
+            id=FOOD_ID_PLACEHOLDER,
             user_id=user_id,
             private=False,
             hidden=False,
@@ -546,6 +556,36 @@ class FoodService:
         except Exception as e:
             log.error("Failed to delete food_item with id '%s': %s",
                       food_item_id, e)
+            raise e
+
+    async def semantic_search_food_items_tandoor(
+        self,
+        query: str,
+        user_id: str,
+        limit: int = 20,
+    ) -> list[FoodItem]:
+        """
+        Search for food items in Tandoor.
+
+        :param query: Text query for search
+        :param user_id: ID of the user performing the search
+        :param limit: Maximum number of results to return
+        :return: List of FoodItem objects from Tandoor
+        """
+        try:
+            tandoor_api_client = TandoorAPIClient()
+            tandoor_repo = TandoorRepository(tandoor_api_client)
+            
+            # Search for foods in Tandoor
+            food_items = await tandoor_repo.search_recipes(query, user_id, limit)
+            
+            # Close the connection
+            await tandoor_repo.close()
+            
+            return food_items
+        except Exception as e:
+            log.error(
+                "Failed to search food items with query '%s' in Tandoor: %s", query, e)
             raise e
 
     async def get_last_logged(self, n_items: int, user_id: str) -> list[FoodItem]:
