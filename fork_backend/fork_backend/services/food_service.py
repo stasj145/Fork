@@ -214,11 +214,40 @@ class FoodService:
         code: Optional[str] = None,
         source: Sources = Sources.LOCAL,
         limit: int = 20,
-        include_private: bool = True,
         min_similarity: float = 0.3,
     ) -> list[FoodItem]:
         """
-        Search for food items.
+        Search for food items based on query text, barcode, or both, with various filtering options.
+
+        :param user_id: The ID of the user performing the search. Used for privacy filtering.
+        :type user_id: str
+        :param query: Text query for semantic search. Cannot be used with 'code' parameter.
+        :type query: Optional[str]
+        :param code: Barcode to search for exact matches. Cannot be used with 'query' parameter.
+        :type code: Optional[str]
+        :param source: Source to search in (LOCAL or OPENFOODFACTS). Defaults to LOCAL.
+        :type source: Sources, optional
+        :param limit: Maximum number of results to return. Defaults to 20.
+        :type limit: int, optional
+        :param min_similarity: Minimum similarity threshold for semantic search (0.0 to 1.0).
+                              Only applies to local semantic searches. Defaults to 0.3.
+        :type min_similarity: float, optional
+        :return: List of FoodItem objects matching the search criteria.
+        :rtype: list[FoodItem]
+        :raises ValueError: If both 'query' and 'code' parameters are provided.
+        :raises Exception: If there's an error during the search process.
+
+        **Search Behavior:**
+        - If 'query' is provided, performs semantic search in the specified source
+        - If 'code' is provided, performs exact barcode match (first in local DB, then OpenFoodFacts)
+        - If neither 'query' nor 'code' is provided, returns empty list
+        - Cannot use both 'query' and 'code' simultaneously
+
+        **Privacy Filtering:**
+        - For LOCAL searches: 
+          * When private_only=True: Only returns private items owned by the user
+          * When private_only=False: Returns public items and user's private items
+        - For OPENFOODFACTS searches: No privacy filtering (external source)
         """
         if not query and not code:
             return []
@@ -229,12 +258,12 @@ class FoodService:
             log.error(err_msg)
             raise ValueError(err_msg)
 
-        if source == Sources.LOCAL and query:
+        if source == Sources.LOCAL or source == Sources.PERSONAL and query:
             return await self.semantic_search_food_items_local(
                 query=query,
                 user_id=user_id,
                 limit=limit,
-                include_private=include_private,
+                private_only = True if source == Sources.PERSONAL else False,
                 min_similarity=min_similarity)
         if source == Sources.OPENFOODFACTS and query:
             return await self.semantic_search_food_items_open_food_facts(
@@ -392,7 +421,7 @@ class FoodService:
         query: str,
         user_id: str,
         limit: int = 20,
-        include_private: bool = True,
+        private_only: bool = False,
         min_similarity: float = 0.3,
     ) -> list[FoodItem]:
         """
@@ -406,13 +435,22 @@ class FoodService:
                 similarity = 1 - \
                     FoodItem.embedding.cosine_distance(query_embedding)
 
+                # pylint: disable=singleton-comparison
                 stmt = select(FoodItem, similarity.label('similarity')).where(
                     FoodItem.hidden == False).options(
                         selectinload(FoodItem.ingredients).selectinload(
                             FoodItemIngredient.ingredient))
 
                 # pylint: disable=singleton-comparison
-                if include_private:
+                if private_only:
+                    stmt = stmt.where(
+                        and_(
+                            FoodItem.private == True,
+                            FoodItem.user_id == user_id,
+                            similarity >= min_similarity
+                        )
+                    )
+                else:
                     stmt = stmt.where(
                         and_(
                             or_(
@@ -422,14 +460,6 @@ class FoodService:
                             similarity >= min_similarity
                         )
                     )
-                else:
-                    stmt = stmt.where(
-                        and_(
-                            FoodItem.private == False,
-                            similarity >= min_similarity
-                        )
-                    )
-
 
                 stmt = stmt.order_by(similarity.desc()).limit(limit)
 
