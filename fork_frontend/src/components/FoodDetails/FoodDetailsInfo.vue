@@ -196,6 +196,21 @@
         <IconAdd></IconAdd>
       </button>
     </div>
+    <div class="attribution-container">
+      <span
+        class="open-nutrition-attribution-text"
+        v-if="selectedFood.brand == 'OpenNutrition Foods'"
+      >
+        Information provided by OpenNutrition under the Open Database License (ODbL).
+        <a
+          class="attribution-link"
+          target="_blank"
+          rel="noopener noreferrer"
+          href="https://www.opennutrition.app"
+          >https://www.opennutrition.app</a
+        >
+      </span>
+    </div>
   </div>
 </template>
 
@@ -897,6 +912,23 @@ textarea:focus {
   background-color: var(--color-accent-secondary);
   border: 1px solid var(--color-accent-primary);
   border-radius: 1rem;
+}
+
+.attribution-container {
+  width: 100%;
+  height: fit-content;
+  padding: 0.5rem;
+  color: var(--color-text-secondary);
+}
+
+.attribution-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.attribution-link:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
 }
 
 @media (max-width: 480px) {
