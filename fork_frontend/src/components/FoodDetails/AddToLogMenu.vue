@@ -166,19 +166,22 @@ async function saveFood(updatedFood: Food) {
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
     }
+
     const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
-    selectedFood.value = results
+
+    const finalFood = { ...results }
+
+    selectedFood.value = finalFood
 
     if (updatedFood.external_image_url) {
       const externalImg = await fetch(updatedFood.external_image_url)
-
       const imageBlob = await externalImg.blob()
       const file = new File([imageBlob], 'external.jpg', { type: imageBlob.type })
 
       const formData = new FormData()
       formData.append('file', file)
 
-      await fetchWrapper.put(`/api/v1/food/item/${selectedFood.value.id}/image`, formData)
+      await fetchWrapper.put(`/api/v1/food/item/${finalFood.id}/image`, formData)
     }
   } catch (err) {
     if (err instanceof Error) {
@@ -187,7 +190,6 @@ async function saveFood(updatedFood: Food) {
     }
   }
 }
-
 async function APIAddOrUpdateFoodEntry(
   quantity: number,
   mealType: string,
