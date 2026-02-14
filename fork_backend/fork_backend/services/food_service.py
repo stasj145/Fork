@@ -455,7 +455,6 @@ class FoodService:
                 if private_only:
                     stmt = stmt.where(
                         and_(
-                            FoodItem.private == True,
                             FoodItem.user_id == user_id,
                             similarity >= min_similarity
                         )

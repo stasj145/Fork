@@ -11,7 +11,7 @@ from fork_backend.services.food_service import FoodService
 from fork_backend.services.image_service import ImageService
 from fork_backend.api.schemas.food_schema import (
     FoodDetailed, FoodCreate, FoodUpdate, FoodSearch)
-from fork_backend.api.schemas.image_schema import RequestImage
+from fork_backend.api.schemas.image_schema import RequestImage, ImageUrl
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
 from fork_backend.models.user import User
 from fork_backend.models.image_sizes import ImageSize
@@ -293,6 +293,69 @@ async def update_food_image(food_id: str, file: UploadFile = File(...),
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to update food image: {str(e)}",
+        ) from e
+
+@router.put("/item/{food_id}/image_from_url", response_model=RequestImage, status_code=status.HTTP_200_OK)
+async def update_food_image_from_url(food_id: str, image_url: ImageUrl,
+                            current_user: User = Depends(get_current_user)):
+    """
+    Update the image for a specific food item from a URL.
+
+    :param food_id: ID of the food item to update
+    :type food_id: str
+    :param image_url: URL of the image to download and use
+    :type image_url: ImageUrl
+    :return: Updated food item with new image
+    :rtype: RequestImage
+    """
+    try:
+        food_service = FoodService()
+        image_service = ImageService()
+
+        # Get the food item to verify ownership
+        food_item = await food_service.get_food_item_by_id(food_id)
+
+        if not food_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Food item not found",
+            )
+
+        # Verify ownership
+        if not verify_ownership(action="edit", user=current_user, food_item=food_item):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unable to access. Wrong user.",
+            )
+
+        old_filename = None
+        if food_item.img_name:
+            old_filename = food_item.img_name
+
+        filename = await image_service.validate_process_save_from_url(str(image_url.url))
+
+        food_item.img_name = filename
+        updated_food_item = await food_service.update_food_item(food_item)
+
+        if not updated_food_item:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update food item with new image",
+            )
+
+        if old_filename:
+            await image_service.delete(image_name=old_filename)
+
+        return RequestImage(name=filename)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(
+            "Failed to update food image for food item with id '%s' from URL: %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to update food image from URL: {str(e)}",
         ) from e
 
 

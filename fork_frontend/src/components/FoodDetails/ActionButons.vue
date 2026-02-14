@@ -106,6 +106,8 @@ const deleting = ref(false)
 const deleteConfirmed = ref(false)
 const isEditing = ref(creationMode.value || props.editingMode ? true : false)
 
+const placeholder_id = 'PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB'
+
 function toggleEditing() {
   isEditing.value = !isEditing.value
   deleteConfirmed.value = false
@@ -123,37 +125,37 @@ function emitAddOrEatMode() {
 async function saveFood(updatedFood: Food) {
   deleteConfirmed.value = false
   saving.value = true
+
   try {
+    let finalFood: Food
+
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
     }
-    if (creationMode.value) {
+
+    if (creationMode.value || selectedFood.value.id == placeholder_id) {
+      console.log('Creating new food...')
       const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
-      results.img_src = updatedFood.img_src
+
+      // Clone to prevent background reactivity from overwriting it
+      finalFood = { ...results, img_src: updatedFood.img_src }
+
       creationMode.value = false
-      selectedFood.value = results
     } else {
       const results: Food = await fetchWrapper.patch(
         `/api/v1/food/item/${updatedFood.id}`,
         updatedFood,
       )
-      results.img_src = updatedFood.img_src
-      selectedFood.value = results
+      finalFood = { ...results, img_src: updatedFood.img_src }
     }
 
+    selectedFood.value = finalFood
+
     if (updatedFood.external_image_url) {
-      const externalImg = await fetch(updatedFood.external_image_url)
-
-      const imageBlob = await externalImg.blob()
-      const file = new File([imageBlob], 'external.jpg', { type: imageBlob.type })
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetchWrapper.put(
-        `/api/v1/food/item/${selectedFood.value.id}/image`,
-        formData,
-      )
+      const response = await fetchWrapper.put(`/api/v1/food/item/${finalFood.id}/image_from_url`, {
+        url: updatedFood.external_image_url,
+      })
+      finalFood.img_name = response['name']
       selectedFood.value.img_name = response['name']
     }
   } catch (err) {
@@ -165,11 +167,11 @@ async function saveFood(updatedFood: Food) {
     saving.value = false
     getImage()
   }
+
   if (!showSavingError.value) {
     toggleEditing()
   }
 }
-
 async function getImage() {
   if (!selectedFood.value || !selectedFood.value.img_name) {
     return
