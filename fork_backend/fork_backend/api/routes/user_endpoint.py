@@ -1,5 +1,6 @@
 """User management endpoints"""
 
+import os
 from datetime import date
 from typing import Optional
 from fastapi import APIRouter, status, Depends, HTTPException, Query
@@ -40,6 +41,15 @@ async def create_user(user_info: UserCreate):
     """
     Create a new user.
     """
+    user_creation_disabled: bool = os.environ.get("FORK_USER_CREATION_DISABLED", default=False)
+    if user_creation_disabled:
+        log.warning("Tried to create new user, but user creation is disabled")
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail=("Tried to create new user, but user creation is disabled. " +
+                    "Please contact the server admin."),
+        )
+
     service = UserService()
 
     try:
@@ -52,7 +62,7 @@ async def create_user(user_info: UserCreate):
         log.error("Failed to create new user: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to create user: {str(e)}",
+            detail="Unable to create user",
         ) from e
 
     # create initial goals
@@ -63,7 +73,7 @@ async def create_user(user_info: UserCreate):
         log.error("Failed to create new goals: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to create new goals: {str(e)}",
+            detail="Unable to create new goals",
         ) from e
 
 
@@ -105,7 +115,7 @@ async def update_user(user_id: str, user_info: UserUpdate,
         log.error("Failed to update user with id '%s': %s", user_id, str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to updated user: {str(e)}",
+            detail="Unable to updated user",
         ) from e
 
 
