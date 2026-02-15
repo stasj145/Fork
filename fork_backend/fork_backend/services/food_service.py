@@ -262,7 +262,7 @@ class FoodService:
             log.error(err_msg)
             raise ValueError(err_msg)
 
-        if source == Sources.LOCAL or source == Sources.PERSONAL and query:
+        if (source == Sources.LOCAL or source == Sources.PERSONAL) and query:
             return await self.semantic_search_food_items_local(
                 query=query,
                 user_id=user_id,

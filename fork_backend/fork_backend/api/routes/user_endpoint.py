@@ -4,6 +4,7 @@ import os
 from datetime import date
 from typing import Optional
 from fastapi import APIRouter, status, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 
 
 from fork_backend.core.logging import get_logger
@@ -52,7 +53,7 @@ async def create_user(user_info: UserCreate):
     Create a new user.
     """
     user_creation_disabled: bool = str_to_bool(
-        os.environ.get("FORK_USER_CREATION_DISABLED",default="false"))
+        os.environ.get("FORK_USER_CREATION_DISABLED", default="false"))
     if user_creation_disabled:
         log.warning("Tried to create new user, but user creation is disabled")
         raise HTTPException(
@@ -69,12 +70,21 @@ async def create_user(user_info: UserCreate):
             email=user_info.email,
             password=user_info.password,
         )
+    except IntegrityError as e:
+        # Check specifically for unique constraint violations (like email already exists)
+        log.error("Conflict error during user registration: %s", str(e))
+        # pylint: disable=raise-missing-from
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email or username already exists."
+        )
     except Exception as e:
         log.error("Failed to create new user: %s", str(e))
+        # pylint: disable=raise-missing-from
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to create user",
-        ) from e
+        )
 
     # create initial goals
     goals: Goals = Goals(user_id = new_user.id, **user_info.goals.model_dump())
