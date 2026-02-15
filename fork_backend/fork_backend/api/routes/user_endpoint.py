@@ -35,13 +35,24 @@ def verify_user_id(user: User, user_id_to_access: str) -> bool:
         detail="Unable to access. Worng user.",
     )
 
+def str_to_bool(val: str) -> bool:
+    """
+    (Very) Basic function to turn a string into a bool.
+    
+    :param val: String value to check
+    :type val: str
+    :return: True/False
+    :rtype: bool
+    """
+    return val.lower() in ("true")
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_user(user_info: UserCreate):
     """
     Create a new user.
     """
-    user_creation_disabled: bool = os.environ.get("FORK_USER_CREATION_DISABLED", default=False)
+    user_creation_disabled: bool = str_to_bool(
+        os.environ.get("FORK_USER_CREATION_DISABLED",default="false"))
     if user_creation_disabled:
         log.warning("Tried to create new user, but user creation is disabled")
         raise HTTPException(
