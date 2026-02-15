@@ -13,7 +13,7 @@ class FoodLog(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid4()))
     user_id: Mapped[str] = mapped_column(
-        ForeignKey("users.id"), nullable=False)
+        ForeignKey("users.id"), nullable=False, index=True)
     date: Mapped[str] = mapped_column(Date, nullable=False, index=True)
     goals_id: Mapped[str] = mapped_column(String(36), ForeignKey("goals.id"), nullable=False)
     notes: Mapped[str] = mapped_column(String(1000), default="")

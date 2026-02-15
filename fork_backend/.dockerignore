@@ -18,3 +18,4 @@ fork_backend.log
 .env.local
 .env.*.local
 .venv
+/images

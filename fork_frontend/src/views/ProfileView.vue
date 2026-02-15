@@ -4,6 +4,12 @@
       <Spinner></Spinner>
     </div>
     <div class="user-information-root" v-if="!loading && user">
+      <WeightHistoryModal
+        v-if="showWeightHistoryModal"
+        v-model="showWeightHistoryModal"
+        :initial-weight-history="user.weight_history"
+        @save="saveWeightHistory"
+      ></WeightHistoryModal>
       <div class="user-base-info">
         <div class="user-info-item-with-icon">
           <IconName class="icon"></IconName>
@@ -107,6 +113,9 @@
               :disabled="!isEditing"
             />
           </div>
+          <button v-if="isEditing" class="btn-edit-history" @click="openWeightHistoryModal">
+            Edit History
+          </button>
         </div>
         <div class="user-info-item-with-icon">
           <IconHeight class="icon"></IconHeight>
@@ -244,8 +253,10 @@ import { useRouter } from 'vue-router'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import { useAuthStore } from '@/stores/auth'
 import type { User } from '@/types/user'
+import type { WeightHistory } from '@/types/user'
 import ErrorModal from '@/components/ErrorModal.vue'
 import Spinner from '@/components/Spinner.vue'
+import WeightHistoryModal from '@/components/WeightHistoryModal.vue'
 
 // Icon imports
 import IconName from '@/components/icons/IconName.vue'
@@ -265,6 +276,7 @@ import IconSave from '@/components/icons/IconSave.vue'
 import IconCancel from '@/components/icons/IconCancel.vue'
 import IconPassword from '@/components/icons/IconPassword.vue'
 import IconLogout from '@/components/icons/IconLogout.vue'
+import { getFormattedDateToday } from '@/helpers/utils'
 
 const router = useRouter()
 
@@ -277,6 +289,7 @@ const loading = ref(true)
 const isEditing = ref(false)
 const newPassword = ref<string | null>(null)
 const newPasswordConfirmation = ref<string | null>(null)
+const showWeightHistoryModal = ref(false)
 
 const loadUserData = async () => {
   try {
@@ -288,6 +301,9 @@ const loadUserData = async () => {
     const user_id = user_local.user_id
 
     user.value = await fetchWrapper.get(`/api/v1/user/${user_id}`)
+    if (user.value?.weight_history[0]) {
+      user.value.weight = user.value?.weight_history[0]?.weight
+    }
   } catch (err) {
     console.error('Error loading user data:', err)
     if (err instanceof Error) {
@@ -310,8 +326,13 @@ const saveUser = async () => {
     if (newPassword.value && newPassword.value == newPasswordConfirmation.value) {
       user.value.password = newPassword.value
     }
-
-    user.value = await fetchWrapper.patch(`/api/v1/user/${user_id}`, user.value)
+    user.value = await fetchWrapper.patch(
+      `/api/v1/user/${user_id}?weight_date_overwrite=${getFormattedDateToday()}`,
+      user.value,
+    )
+    if (user.value?.weight_history[0]) {
+      user.value.weight = user.value.weight_history[0].weight
+    }
   } catch (err) {
     console.error('Error updating user data:', err)
     if (err instanceof Error) {
@@ -340,6 +361,34 @@ const logout = async () => {
 onMounted(async () => {
   loadUserData()
 })
+
+const openWeightHistoryModal = () => {
+  if (user.value) {
+    showWeightHistoryModal.value = true
+  }
+}
+
+const saveWeightHistory = async (updatedHistory: WeightHistory[]) => {
+  if (!user.value || !user.value.weight_history) {
+    return
+  }
+
+  try {
+    user.value.weight_history = await fetchWrapper.put(
+      `/api/v1/user/${user.value.id}/weight-history`,
+      updatedHistory,
+    )
+    if (user.value?.weight_history[0]) {
+      user.value.weight = user.value.weight_history[0]?.weight
+    }
+  } catch (err) {
+    console.error('Error updating weight history:', err)
+    if (err instanceof Error) {
+      showSavingError.value = true
+      errorDetails.value = err.message || err.toString() || 'Unknown error'
+    }
+  }
+}
 </script>
 
 <style scoped lang="css">
@@ -399,9 +448,21 @@ onMounted(async () => {
 
 .user-info-item-with-icon .icon {
   align-self: start;
+  flex-shrink: 0;
   height: 2rem;
+  width: 2rem;
   margin-top: 0.75rem;
   margin-right: 0.25rem;
+}
+
+.btn-edit-history {
+  height: 100%;
+  width: 4rem;
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  background-color: var(--color-accent-secondary);
+  border: 1px solid var(--color-accent-secondary);
+  border-radius: 1rem;
 }
 
 .user-info-item {

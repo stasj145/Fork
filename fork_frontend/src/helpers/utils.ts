@@ -21,8 +21,6 @@ export function getFormattedDate(
 
   const dateString: string = `${year}-${month}-${day}`
 
-  localStorage.setItem('todayDate', getFormattedDateToday())
-
   return dateString
 }
 

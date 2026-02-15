@@ -3,6 +3,8 @@
 from enum import Enum
 
 class Sources(str, Enum):
-    """All recognised gender types for BMR calc"""
+    """All recognised sources for food search"""
     LOCAL = "local"
+    PERSONAL = "personal"
     OPENFOODFACTS = "openfoodfacts"
+    TANDOOR = "tandoor"

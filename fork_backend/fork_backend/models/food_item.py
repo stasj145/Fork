@@ -18,12 +18,15 @@ class FoodItem(Base):
         ForeignKey("users.id"), nullable=False)
     private: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False)
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     brand: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(
         String(1000), nullable=True)
     barcode: Mapped[str | None] = mapped_column(
         String(50), nullable=True, index=True, unique=True)
+    img_name: Mapped[str] = mapped_column(String(40), nullable=True, default=None)
 
     # Nutritional facts per serving
     serving_size: Mapped[float] = mapped_column(Float, nullable=False)
@@ -47,6 +50,16 @@ class FoodItem(Base):
         back_populates="parent",
         cascade="all, delete-orphan"
     )
+
+    # ephemeral property
+    @property
+    def external_image_url(self) -> str | None:
+        """Url to externally hosted image. Not persisted to db"""
+        return getattr(self, "_ext_image_url", None)
+
+    @external_image_url.setter
+    def external_image_url(self, value):
+        self._ext_image_url = value
 
 
 class FoodItemIngredient(Base):

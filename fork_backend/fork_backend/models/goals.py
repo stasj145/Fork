@@ -1,7 +1,7 @@
 """goal model"""
 
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

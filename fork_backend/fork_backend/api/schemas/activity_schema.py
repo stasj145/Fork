@@ -6,7 +6,6 @@ from pydantic import Field
 
 from fork_backend.api.schemas.base_schema import ForkBaseSchema
 from fork_backend.api.schemas.user_schema import GoalsBase
-from fork_backend.models.activities import Activities
 
 
 class ActivityBase(ForkBaseSchema):

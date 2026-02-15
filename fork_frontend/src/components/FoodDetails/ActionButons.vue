@@ -106,6 +106,8 @@ const deleting = ref(false)
 const deleteConfirmed = ref(false)
 const isEditing = ref(creationMode.value || props.editingMode ? true : false)
 
+const placeholder_id = 'PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB'
+
 function toggleEditing() {
   isEditing.value = !isEditing.value
   deleteConfirmed.value = false
@@ -123,17 +125,38 @@ function emitAddOrEatMode() {
 async function saveFood(updatedFood: Food) {
   deleteConfirmed.value = false
   saving.value = true
+
   try {
+    let finalFood: Food
+
     if (updatedFood.barcode?.trim() == '') {
       updatedFood.barcode = null
     }
-    if (creationMode.value) {
-      const results: Food = await fetchWrapper.post('/api/v1/food/', updatedFood)
+
+    if (creationMode.value || selectedFood.value.id == placeholder_id) {
+      console.log('Creating new food...')
+      const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
+
+      // Clone to prevent background reactivity from overwriting it
+      finalFood = { ...results, img_src: updatedFood.img_src }
+
       creationMode.value = false
-      selectedFood.value = results
     } else {
-      const results: Food = await fetchWrapper.patch(`/api/v1/food/${updatedFood.id}`, updatedFood)
-      selectedFood.value = results
+      const results: Food = await fetchWrapper.patch(
+        `/api/v1/food/item/${updatedFood.id}`,
+        updatedFood,
+      )
+      finalFood = { ...results, img_src: updatedFood.img_src }
+    }
+
+    selectedFood.value = finalFood
+
+    if (updatedFood.external_image_url) {
+      const response = await fetchWrapper.put(`/api/v1/food/item/${finalFood.id}/image_from_url`, {
+        url: updatedFood.external_image_url,
+      })
+      finalFood.img_name = response['name']
+      selectedFood.value.img_name = response['name']
     }
   } catch (err) {
     if (err instanceof Error) {
@@ -142,9 +165,30 @@ async function saveFood(updatedFood: Food) {
     }
   } finally {
     saving.value = false
+    getImage()
   }
+
   if (!showSavingError.value) {
     toggleEditing()
+  }
+}
+async function getImage() {
+  if (!selectedFood.value || !selectedFood.value.img_name) {
+    return
+  }
+
+  try {
+    const imgResp = await fetchWrapper.get(
+      `/api/v1/food/item/${selectedFood.value.id}/image?size=large`,
+      undefined, // no body
+      true, // Prevent Cache Read
+    )
+    const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
+    selectedFood.value.img_src = URL.createObjectURL(imgBlob)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn('Could not load: ' + err.message)
+    }
   }
 }
 
@@ -155,7 +199,7 @@ async function deleteFood(foodToDelete: Food) {
   }
   deleting.value = true
   try {
-    await fetchWrapper.delete(`/api/v1/food/${foodToDelete.id}`)
+    await fetchWrapper.delete(`/api/v1/food/item/${foodToDelete.id}`)
   } catch (err) {
     if (err instanceof Error) {
       showDeletionError.value = true

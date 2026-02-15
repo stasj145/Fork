@@ -115,6 +115,37 @@ class LogService:
                          str(e))
             raise e
 
+    async def get_last_x_logs(self, user_id: str, n_logs: int) -> list[FoodLog]:
+        """
+        Get a list of food logs
+
+        :param user_id: The ID of the user.
+        :param n_logs: How many logs to get. Starting with the latest available based on "date".
+            0 to disable limit and get all (USE WITH CAUTION!).
+
+        :return: List of FoodLog with max length of n_logs.
+            (might be shorter if less entries are available)
+        """
+        try:
+            async with get_async_db() as db:
+                stmt = select(
+                    FoodLog).where(FoodLog.user_id == user_id).order_by(
+                        FoodLog.date.desc()).options(
+                        selectinload(FoodLog.food_entries).selectinload(
+                            FoodEntry.food_item).selectinload(FoodItem.ingredients).selectinload(
+                                FoodItemIngredient.ingredient),
+                        selectinload(FoodLog.goals)
+                    )
+                if n_logs > 0:
+                    stmt = stmt.limit(n_logs)
+
+                result = await db.execute(stmt)
+                food_logs = result.scalars().all()
+                return food_logs
+        except Exception as e:
+            logger.error("Failed to get logs for user '%s': %s", user_id, str(e))
+            raise e
+
     async def add_food_entry(self, user_id: str, log_date: date, food_entry: FoodEntry
                              ) -> FoodEntry:
         """

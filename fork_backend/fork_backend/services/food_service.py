@@ -4,16 +4,23 @@ from typing import Optional, Dict, Any
 import asyncio
 from concurrent.futures import ThreadPoolExecutor  # pylint: disable=no-name-in-module
 
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, desc, func
 from sqlalchemy.orm import selectinload
 from sentence_transformers import SentenceTransformer
 import openfoodfacts
 
-from fork_backend.core.constants import OPENFOODFACTS_USER_AGENT
+from fork_backend.core.constants import OPENFOODFACTS_USER_AGENT, FOOD_ID_PLACEHOLDER
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
 from fork_backend.models.food_sources import Sources
+from fork_backend.models.food_log import FoodLog
+from fork_backend.models.food_entry import FoodEntry
+from fork_backend.services.image_service import ImageService
+
+# Tandoor integration
+from fork_backend.infrastructure.api_clients.tandoor_api_client import TandoorAPIClient
+from fork_backend.infrastructure.repositories.tandoor_repository import TandoorRepository
 
 log = get_logger()
 
@@ -130,12 +137,10 @@ class FoodService:
 
                 # Check if ingredients have actually changed before updating them
                 if self._have_ingredients_changed(original.ingredients, food_item.ingredients):
-                    print("trying to update ingredients")
                     # Clear existing ingredients and add new ones
                     original.ingredients.clear()
 
                     for item in food_item.ingredients:
-                        print(item.__dict__)
                         new_ingredient = FoodItemIngredient(
                             parent_id=food_item.id,
                             ingredient_id=item.ingredient_id,
@@ -213,11 +218,40 @@ class FoodService:
         code: Optional[str] = None,
         source: Sources = Sources.LOCAL,
         limit: int = 20,
-        include_private: bool = True,
         min_similarity: float = 0.3,
     ) -> list[FoodItem]:
         """
-        Search for food items.
+        Search for food items based on query text, barcode, or both, with various filtering options.
+
+        :param user_id: The ID of the user performing the search. Used for privacy filtering.
+        :type user_id: str
+        :param query: Text query for semantic search. Cannot be used with 'code' parameter.
+        :type query: Optional[str]
+        :param code: Barcode to search for exact matches. Cannot be used with 'query' parameter.
+        :type code: Optional[str]
+        :param source: Source to search in (LOCAL or OPENFOODFACTS). Defaults to LOCAL.
+        :type source: Sources, optional
+        :param limit: Maximum number of results to return. Defaults to 20.
+        :type limit: int, optional
+        :param min_similarity: Minimum similarity threshold for semantic search (0.0 to 1.0).
+                              Only applies to local semantic searches. Defaults to 0.3.
+        :type min_similarity: float, optional
+        :return: List of FoodItem objects matching the search criteria.
+        :rtype: list[FoodItem]
+        :raises ValueError: If both 'query' and 'code' parameters are provided.
+        :raises Exception: If there's an error during the search process.
+
+        **Search Behavior:**
+        - If 'query' is provided, performs semantic search in the specified source
+        - If 'code' is provided, performs exact barcode match (first in local DB, then OpenFoodFacts)
+        - If neither 'query' nor 'code' is provided, returns empty list
+        - Cannot use both 'query' and 'code' simultaneously
+
+        **Privacy Filtering:**
+        - For LOCAL searches: 
+          * When private_only=True: Only returns private items owned by the user
+          * When private_only=False: Returns public items and user's private items
+        - For OPENFOODFACTS searches: No privacy filtering (external source)
         """
         if not query and not code:
             return []
@@ -228,15 +262,21 @@ class FoodService:
             log.error(err_msg)
             raise ValueError(err_msg)
 
-        if source == Sources.LOCAL and query:
+        if source == Sources.LOCAL or source == Sources.PERSONAL and query:
             return await self.semantic_search_food_items_local(
                 query=query,
                 user_id=user_id,
                 limit=limit,
-                include_private=include_private,
+                private_only=True if source == Sources.PERSONAL else False,
                 min_similarity=min_similarity)
         if source == Sources.OPENFOODFACTS and query:
             return await self.semantic_search_food_items_open_food_facts(
+                query=query,
+                user_id=user_id,
+                limit=limit,
+            )
+        if source == Sources.TANDOOR and query:
+            return await self.semantic_search_food_items_tandoor(
                 query=query,
                 user_id=user_id,
                 limit=limit,
@@ -312,7 +352,8 @@ class FoodService:
         Search for food items in OpenFoodFacts using barcode.
         """
         try:
-            api = openfoodfacts.API(user_agent=OPENFOODFACTS_USER_AGENT)
+            api = openfoodfacts.API(
+                user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
             response = api.product.get(code=code)
             if not response:
                 return []
@@ -340,7 +381,7 @@ class FoodService:
         """
         try:
             api = openfoodfacts.API(
-                user_agent=OPENFOODFACTS_USER_AGENT, country=openfoodfacts.Country.de)
+                user_agent=OPENFOODFACTS_USER_AGENT, timeout=30)
             response = api.product.text_search(
                 query=query,
                 page=1,
@@ -364,9 +405,10 @@ class FoodService:
     async def _food_item_from_open_food_facts_response(self, response: Dict[str, Any], user_id: str
                                                        ) -> FoodItem:
         new_food_item = FoodItem(
-            id="PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB",
+            id=FOOD_ID_PLACEHOLDER,
             user_id=user_id,
             private=False,
+            hidden=False,
             name=str(response.get("product_name", "")),
             brand=str(response.get("brands", "")),
             description=", ".join([ing.get("text", "")
@@ -382,6 +424,8 @@ class FoodService:
                 "carbohydrates_100g", 0),
             fat_per_100=response.get("nutriments", {}).get("fat_100g", 0),
         )
+        new_food_item.external_image_url = response.get(
+            "image_small_url", None)
         return new_food_item
 
     async def semantic_search_food_items_local(
@@ -389,7 +433,7 @@ class FoodService:
         query: str,
         user_id: str,
         limit: int = 20,
-        include_private: bool = True,
+        private_only: bool = False,
         min_similarity: float = 0.3,
     ) -> list[FoodItem]:
         """
@@ -398,18 +442,26 @@ class FoodService:
         try:
             # Generate query embedding asynchronously
             query_embedding = await self._encode_async(query)
-            print(query_embedding)
 
             async with get_async_db() as db:
                 similarity = 1 - \
                     FoodItem.embedding.cosine_distance(query_embedding)
 
-                stmt = select(FoodItem, similarity.label('similarity')).options(
+                # pylint: disable=singleton-comparison
+                stmt = select(FoodItem, similarity.label('similarity')).where(
+                    FoodItem.hidden == False).options(
                         selectinload(FoodItem.ingredients).selectinload(
                             FoodItemIngredient.ingredient))
 
                 # pylint: disable=singleton-comparison
-                if include_private:
+                if private_only:
+                    stmt = stmt.where(
+                        and_(
+                            FoodItem.user_id == user_id,
+                            similarity >= min_similarity
+                        )
+                    )
+                else:
                     stmt = stmt.where(
                         and_(
                             or_(
@@ -419,22 +471,11 @@ class FoodService:
                             similarity >= min_similarity
                         )
                     )
-                else:
-                    stmt = stmt.where(
-                        and_(
-                            FoodItem.private == False,
-                            similarity >= min_similarity
-                        )
-                    )
-
 
                 stmt = stmt.order_by(similarity.desc()).limit(limit)
 
-                stmt = stmt
-
                 result = await db.execute(stmt)
                 rows = result.all()
-                print(rows)
 
                 log.debug("Search for '%s' returned %d results",
                           query, len(rows))
@@ -504,6 +545,10 @@ class FoodService:
                         "Unable to find food item with id '%s' for deletion", food_item_id)
                     return False
 
+                if food_item.img_name:
+                    image_service = ImageService()
+                    await image_service.delete(food_item.img_name)
+
                 await db.delete(food_item)
                 await db.commit()
                 log.debug("Deleted FoodItem with id '%s'", food_item_id)
@@ -513,3 +558,80 @@ class FoodService:
             log.error("Failed to delete food_item with id '%s': %s",
                       food_item_id, e)
             raise e
+
+    async def semantic_search_food_items_tandoor(
+        self,
+        query: str,
+        user_id: str,
+        limit: int = 20,
+    ) -> list[FoodItem]:
+        """
+        Search for food items in Tandoor.
+
+        :param query: Text query for search
+        :param user_id: ID of the user performing the search
+        :param limit: Maximum number of results to return
+        :return: List of FoodItem objects from Tandoor
+        """
+        try:
+            tandoor_api_client = TandoorAPIClient()
+            tandoor_repo = TandoorRepository(tandoor_api_client)
+
+            # Search for foods in Tandoor
+            food_items = await tandoor_repo.search_recipes(query, user_id, limit)
+
+            # Close the connection
+            await tandoor_repo.close()
+
+            return food_items
+        except Exception as e:
+            log.error(
+                "Failed to search food items with query '%s' in Tandoor: %s", query, e)
+            raise e
+
+    async def get_last_logged(self, n_items: int, user_id: str) -> list[FoodItem]:
+        """
+        Docstring for get_last_logged
+
+        :param n_items: Max number of food items to return
+        :type n_items: int
+        :param user_id: Id of user for which to get the items
+        :type user_id: str
+        :return: Deduplicated list of last logged food items with max lenght n_items
+        :rtype: list[FoodItem]
+        """
+
+        try:
+            async with get_async_db() as db:
+
+                last_eaten_subquery = (
+                    select(
+                        FoodEntry.food_id.label("f_id"),
+                        func.max(FoodLog.date).label("max_date")
+                    )
+                    .join(FoodLog)
+                    .filter(FoodLog.user_id == user_id)
+                    .group_by(FoodEntry.food_id)
+                    .subquery()
+                )
+
+                stmt = (select(FoodItem)
+                        .join(last_eaten_subquery, FoodItem.id == last_eaten_subquery.c.f_id)
+                        .order_by(desc(last_eaten_subquery.c.max_date))
+                        .limit(n_items)
+                        .options(
+                            selectinload(FoodItem.ingredients)
+                            .selectinload(FoodItemIngredient.ingredient)))
+
+                results = await db.execute(stmt)
+
+                food_items = results.scalars().all()
+
+                return food_items
+
+        except Exception as e:
+            log.error("Failed to load last %s food_items from user with id '%s': %s",
+                      n_items, user_id, e)
+            raise e
+
+        return []

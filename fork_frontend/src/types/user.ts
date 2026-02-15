@@ -4,6 +4,7 @@ export interface User {
   password?: string
   email: string
   weight: number
+  weight_history: WeightHistory[]
   height: number
   age: number
   gender: string
@@ -17,4 +18,10 @@ export interface Goals {
   daily_carbs_target: number
   daily_fat_target: number
   daily_calorie_burn_target: number
+}
+
+export interface WeightHistory {
+  id?: string
+  weight: number
+  created_at: string
 }

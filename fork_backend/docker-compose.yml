@@ -26,12 +26,16 @@ services:
       - FORK_BACKEND_ADMIN_EMAIL=fork-admin@example.com
       - FORK_BACKEND_ADMIN_PASSWORD=admin
       - FORK_BACKEND_SECRET_KEY=very_secret_key_here_change_this_in_production
+      - TANDOOR_API_URL=https://tandoor.your.url.tld
+      - TANDOOR_API_KEY=Tandoor_api_key
       - FORK_POSTGRES_USER=fork_user
       - FORK_POSTGRES_PASSWORD=fork_password
       - FORK_POSTGRES_DB_NAME=fork_db
       - FORK_POSTGRES_URL=fork_postgres
     ports:
       - 8000:8000
+    volumes:
+      - fork_img_data:/app/images
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,3 +43,4 @@ services:
 
 volumes:
   postgres_data:
+  fork_img_data:

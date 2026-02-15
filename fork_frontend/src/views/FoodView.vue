@@ -34,7 +34,42 @@
         </button>
       </div>
       <div class="results-root">
-        <span class="no-results-text" v-if="!showResults">Search for a food to start...</span>
+        <div class="no-results" v-if="!showResults">
+          <span class="no-results-text">Search for a food to start...</span>
+          <div class="last-logged-results-container">
+            <span class="last-logged-results-container-heading">Recent food</span>
+            <div v-if="loadingLastLogged" class="results-loading">
+              Loading recently logged food...
+            </div>
+            <div v-else-if="lastLoggedFood.length > 0" class="results-list">
+              <div
+                v-for="food in lastLoggedFood"
+                :key="food.id"
+                class="result-item"
+                @click="selectFood(food)"
+              >
+                <div class="food-item-text">
+                  <div class="food-name">
+                    {{ food.name }}
+                  </div>
+                  <span class="brand-text">{{ food.brand }}</span>
+                  <div class="food-summary-details">
+                    <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                  </div>
+                </div>
+                <div class="food-img-container">
+                  <img
+                    class="food-img"
+                    :src="food.img_src"
+                    alt="Food Image"
+                    v-if="food.id && food.img_src"
+                  />
+                </div>
+              </div>
+            </div>
+            <span v-else>No recent food found</span>
+          </div>
+        </div>
         <div class="results-container" v-if="showResults">
           <div v-if="loading" class="results-loading">Searching...</div>
           <div v-else-if="searchResults.length > 0" class="results-list">
@@ -44,12 +79,26 @@
               class="result-item"
               @click="selectFood(food)"
             >
-              <div class="food-name">{{ food.name }}</div>
-              <div class="food-summary-details">
-                <span>Calories: {{ food.calories_per_100 }}/100g</span>
+              <div class="food-item-text">
+                <div class="food-name">
+                  {{ food.name }}
+                </div>
+                <span class="brand-text">{{ food.brand }}</span>
+                <div class="food-summary-details">
+                  <span>Calories: {{ food.calories_per_100.toFixed(0) }}/100g</span>
+                </div>
+              </div>
+              <div class="food-img-container">
+                <img
+                  class="food-img"
+                  :src="food.img_src"
+                  alt="Food Image"
+                  v-if="food.id && food.img_src"
+                />
               </div>
             </div>
           </div>
+          <span v-else>Nothing found</span>
         </div>
       </div>
       <div class="button-root">
@@ -79,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import type { Food } from '@/types/food'
 import { createEmptyFood } from '@/types/food'
@@ -94,8 +143,11 @@ import BarcodeScanner from '@/components/BarcodeScanner.vue'
 const searchQuery = ref('')
 const searchCode = ref('')
 const searchResults = ref<Food[]>([])
+const lastLoggedFood = ref<Food[]>([])
 const loading = ref(false)
+const loadingLastLogged = ref(false)
 const showResults = ref(false)
+const showResultsLastLogged = ref(false)
 const debounceTimer = ref<number | null>(null)
 const selectedFood = ref<Food | null>(null)
 const addMode = ref(false)
@@ -179,13 +231,42 @@ const performSearch = async () => {
 
   try {
     const results = await fetchWrapper.post(`/api/v1/food/search`, query)
-    searchResults.value = results || []
+    searchResults.value = <Food[]>results || <Food[]>[]
   } catch (error) {
     console.error('Search error:', error)
-    searchResults.value = []
+    searchResults.value = <Food[]>[]
   } finally {
+    for (const foodItem of searchResults.value) {
+      if (foodItem.img_src || !foodItem.id) continue
+      if (foodItem.external_image_url) {
+        foodItem.img_src = foodItem.external_image_url
+        foodItem.img_name = 'placeholder'
+      } else if (foodItem.img_name) {
+        foodItem.img_src = await getImage(foodItem.id)
+      }
+    }
     loading.value = false
     searchCode.value = ''
+  }
+}
+
+const getLastLoggedFood = async () => {
+  loadingLastLogged.value = true
+  showResultsLastLogged.value = true
+
+  try {
+    const results = await fetchWrapper.get(`/api/v1/food/last_logged?n_items=20`)
+    lastLoggedFood.value = results || []
+  } catch (error) {
+    console.error('Search error:', error)
+    lastLoggedFood.value = []
+  } finally {
+    for (const foodItem of lastLoggedFood.value) {
+      if (!foodItem.id || !foodItem.img_name) continue
+      foodItem.img_src = await getImage(foodItem.id)
+    }
+
+    loadingLastLogged.value = false
   }
 }
 
@@ -230,6 +311,30 @@ const openBarcodeScanner = () => {
 const ingredientModeBack = async () => {
   emits('close-add-ingredients')
 }
+
+async function getImage(foodId: string) {
+  if (!foodId || foodId == 'PLACEHOLDER_ID_ITEM_NOT_IN_LOCAL_DB') {
+    return
+  }
+
+  try {
+    const imgResp = await fetchWrapper.get(
+      `/api/v1/food/item/${foodId}/image?size=thumbnail`,
+      undefined, // no body
+      true, // Prevent Cache Read
+    )
+    const imgBlob = new Blob([imgResp], { type: 'image/jpeg' })
+    return URL.createObjectURL(imgBlob)
+  } catch (err) {
+    if (err instanceof Error) {
+      console.warn(`Could not load image for food id ${foodId}: ${err.message}`)
+    }
+  }
+}
+
+onMounted(async () => {
+  getLastLoggedFood()
+})
 </script>
 
 <style lang="css" scoped>
@@ -362,12 +467,48 @@ const ingredientModeBack = async () => {
   align-items: center;
 }
 
+.no-results {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+}
+
+.last-logged-results-container {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  justify-content: start;
+  width: 100%;
+  border: 1px solid var(--color-accent-secondary);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.last-logged-results-container-heading {
+  color: var(--color-text-heading);
+  background-color: var(--color-background-secondary);
+  font-weight: bold;
+  position: relative;
+  bottom: 2rem;
+  left: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-bottom: -1rem;
+  z-index: 10;
+  font-size: 2rem;
+  width: fit-content;
+}
+
 .results-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: start;
   width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .results-list {
@@ -375,28 +516,62 @@ const ingredientModeBack = async () => {
   flex-direction: column;
   align-items: start;
   width: 100%;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
 }
 
 .result-item {
-  margin-bottom: 0.3rem;
   width: 100%;
-  padding: 0.15rem;
-  padding-left: 0.5rem;
-  border: 0.15rem solid var(--color-accent-secondary);
-  border-radius: 0.5rem;
-  background-color: var(--color-background-tertiary);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-item + .result-item {
+  border-top: 1px solid var(--color-accent-secondary);
 }
 
 .result-item:hover {
-  background-color: var(--color-accent-secondary);
+  background-color: var(--color-background-tertiary);
+  cursor: pointer;
+}
+
+.food-item-text {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  width: 100%;
+}
+
+.food-img-container {
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+}
+
+.food-img,
+.img-placeholder {
+  max-height: 2.5rem;
+  max-width: 2.5rem;
+  border-radius: 0.25rem;
+}
+
+.img-placeholder * {
+  color: var(--color-text-secondary);
 }
 
 .food-name {
   font-size: 1.25rem;
   color: var(--color-text-primary);
   margin-bottom: 0.1rem;
+}
+
+.brand-text {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
 }
 
 .food-summary-details {
@@ -427,6 +602,11 @@ const ingredientModeBack = async () => {
 
   .food-view-content {
     min-height: calc(var(--main-content-height) - 1rem);
+  }
+
+  .last-logged-results-container-heading {
+    font-size: 1.5rem;
+    bottom: 1.6rem;
   }
 
   .button-root {
