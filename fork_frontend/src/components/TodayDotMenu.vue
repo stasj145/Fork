@@ -22,9 +22,7 @@
       </button>
       <button class="menu-btn" @click="copyYesterday">
         <span v-if="!updating">Copy from yesterday</span>
-        <div class="btn-spinner">
-          <Spinner v-if="updating"></Spinner>
-        </div>
+        <Spinner class="btn-spinner" v-if="updating"></Spinner>
         <ErrorModal
           v-model="showUpdatingError"
           title="Updating Error"
@@ -306,7 +304,8 @@ const getYesterdayActivityLogData = async () => {
 }
 
 .btn-spinner {
-  height: 1.7rem;
-  width: 1.7rem;
+  align-self: center;
+  height: 1.25rem;
+  width: 1.25rem;
 }
 </style>

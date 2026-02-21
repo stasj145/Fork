@@ -1,6 +1,8 @@
 """activity management endpoints"""
+# pylint: disable=raise-missing-from
 
 from uuid import uuid4
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from fastapi import APIRouter, status, Depends, HTTPException
 
@@ -49,12 +51,26 @@ async def create_activity(activity_info: ActivityCreate, user: User = Depends(ge
         activity = Activities(id=str(uuid4()), user_id=user.id, **activity_info.model_dump())
         new_activity: Activities = await service.add_activity(activity)
         return ActivityDetailed.model_validate(new_activity)
+    except IntegrityError as ie:
+        log.error(
+            "Failed to create new Activity. IntegrityError raised: %s", str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Unable to create Activity. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to create new Activity. Unexpected SQLAlchemyError raised: %s", str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create Activity. Unexpected SQLAlchemyError raised",
+        )
     except Exception as e:
         log.error("Failed to create new Activity: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to create Activity: {str(e)}",
-        ) from e
+            detail=f"Unable to create Activity. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.patch("/{activity_id}", response_model=ActivityDetailed, status_code=status.HTTP_200_OK)
@@ -144,12 +160,19 @@ async def search_activities(query: ActivitySearch, user: User = Depends(get_curr
             limit=query.limit
         )
         return [ActivityDetailed.model_validate(activity) for activity in activities]
-    except Exception as e:
-        log.error("Failed to search for Activities: %s", str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Unable to search for activities. Unexpected SQLAlchemyError raised: %s", str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to search Activities: {str(e)}",
-        ) from e
+            detail="Unable to search for activities. Unexpected SQLAlchemyError raised.",
+        )
+    except Exception as e:
+        log.error("Unable to search for activities. Unexpected error raised: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to search for activities. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.delete("/{activity_id}", status_code=status.HTTP_200_OK)
@@ -178,9 +201,16 @@ async def delete_activity(activity_id: str, current_user: User = Depends(get_cur
             )
     except HTTPException:
         raise
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to delete Activity with id '%s'. Unexpected SQLAlchemyError raised: %s", activity_id, str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete Activity with id '{activity_id}'. Unexpected SQLAlchemyError raised.",
+        )
     except Exception as e:
         log.error("Failed to delete Activity with id '%s': %s", activity_id, str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to delete activity: {str(e)}",
+            detail=f"Unable to delete activity. Unexpected {str(type(e).__name__)} error raised",
         ) from e

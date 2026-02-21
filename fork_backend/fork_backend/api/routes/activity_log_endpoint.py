@@ -1,6 +1,9 @@
 """Activity log management endpoints"""
+# pylint: disable=raise-missing-from
 
 from datetime import date as date_class
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from fastapi import APIRouter, status, Depends, HTTPException, Path, Body, Query
 
 from fork_backend.core.logging import get_logger
@@ -29,12 +32,19 @@ async def get_or_create_activity_log(date: date_class = Path(...), user: User = 
         
         new_log: ActivityLog = await service.create_log(user_id=user.id, log_date=date)
         return ActivityLogInDB.model_validate(new_log)
-    except Exception as e:
-        log.error("Failed to create new activity log: %s", str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get or create activity log for date '%s'. Unexpected SQLAlchemyError raised: %s", date, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to create activity log: {str(e)}",
-        ) from e
+            detail="Failed to get or create activity log. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get or create activity log for date '%s': %s", date, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get or create activity log. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 @router.post("/day/{date}/activity", response_model=ActivityEntryInDB, status_code=status.HTTP_201_CREATED)
 async def add_activity_to_log(
@@ -67,12 +77,26 @@ async def add_activity_to_log(
         )
         
         return ActivityEntryInDB.model_validate(created_entry)
-    except Exception as e:
-        log.error("Failed to add activity entry: %s", str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to add activity entry for date '%s'. IntegrityError raised: %s", date, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to add activity entry. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to add activity entry for date '%s'. Unexpected SQLAlchemyError raised: %s", date, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to add activity entry: {str(e)}",
-        ) from e
+            detail="Failed to add activity entry. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to add activity entry for date '%s': %s", date, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add activity entry. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 @router.delete("/day/{date}/activity/{activity_entry_id}", status_code=status.HTTP_200_OK)
 async def remove_activity_entry(
@@ -98,12 +122,26 @@ async def remove_activity_entry(
             activity_entry_id=activity_entry_id
         )
         return
-    except Exception as e:
-        log.error("Failed to remove activity entry: %s", str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to remove activity entry '%s' for date '%s'. IntegrityError raised: %s", activity_entry_id, date, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to remove activity entry. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to remove activity entry '%s' for date '%s'. Unexpected SQLAlchemyError raised: %s", activity_entry_id, date, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to remove activity entry: {str(e)}",
-        ) from e
+            detail="Failed to remove activity entry. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to remove activity entry '%s' for date '%s': %s", activity_entry_id, date, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to remove activity entry. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 @router.patch("/day/{date}/activity/{activity_entry_id}", response_model=ActivityEntryInDB, status_code=status.HTTP_200_OK)
 async def update_activity_entry(
@@ -135,12 +173,26 @@ async def update_activity_entry(
         )
         
         return ActivityEntryInDB.model_validate(updated_entry)
-    except Exception as e:
-        log.error("Failed to update activity entry: %s", str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to update activity entry '%s' for date '%s'. IntegrityError raised: %s", activity_entry_id, date, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to update activity entry. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update activity entry '%s' for date '%s'. Unexpected SQLAlchemyError raised: %s", activity_entry_id, date, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update activity entry: {str(e)}",
-        ) from e
+            detail="Failed to update activity entry. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to update activity entry '%s' for date '%s': %s", activity_entry_id, date, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update activity entry. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 @router.get("/last/activity", response_model=list[ActivityLogInDB], status_code=status.HTTP_200_OK)
 async def get_x_logs(n_logs: int = Query(1), user: User = Depends(get_current_user)):
@@ -159,10 +211,16 @@ async def get_x_logs(n_logs: int = Query(1), user: User = Depends(get_current_us
     try:
         last_logs: list[ActivityLog] = await service.get_last_x_logs(user_id=user.id, n_logs=n_logs)
         return [ActivityLogInDB.model_validate(log) for log in last_logs]
-
-    except Exception as e:
-        log.error("Failed to get last %x activity logs: %s", n_logs, str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get last '%s' activity logs for user '%s'. Unexpected SQLAlchemyError raised: %s", n_logs, user.id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to get activity logs: {str(e)}",
-        ) from e
+            detail="Failed to get activity logs. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get last '%s' activity logs for user '%s': %s", n_logs, user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get activity logs. Unexpected {str(type(e).__name__)} error raised",
+        )

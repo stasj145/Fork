@@ -1,6 +1,8 @@
 """food management endpoints"""
-
+# pylint: disable=raise-missing-from
 from uuid import uuid4
+
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from fastapi import APIRouter, status, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
@@ -44,7 +46,6 @@ def verify_ownership(action: str, user: User, food_item: FoodItem, allow_edit_pu
     if action == "access" and (
             not food_item.private or (user.id == food_item.user_id)):
         return True
-
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Unable to access. Worng user.",
@@ -70,12 +71,26 @@ async def create_food(food_info: FoodCreate, user: User = Depends(get_current_us
 
         new_food_item: FoodItem = await service.add_food_item(food_item)
         return FoodDetailed.model_validate(new_food_item)
+    except IntegrityError as ie:
+        log.error(
+            "Failed to create new FoodItem. IntegrityError raised: %s", str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Unable to create FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to create new FoodItem. Unexpected SQLAlchemyError raised: %s", str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create FoodItem. Unexpected SQLAlchemyError raised",
+        )
     except Exception as e:
         log.error("Failed to create new FoodItem: %s", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to create FoodItem: {str(e)}",
-        ) from e
+            detail=f"Unable to create FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.patch("/item/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
@@ -106,24 +121,38 @@ async def update_food(food_id: str, food_info: FoodUpdate,
                 parent_id=food_id,
                 ingredient_id=ingredient.ingredient_id,
                 quantity=ingredient.quantity) for ingredient in food_info.ingredients],
-                **food_info.model_dump(exclude=["ingredients"])
+            **food_info.model_dump(exclude=["ingredients"])
         )
 
         updated_food_item = await service.update_food_item(new_food_item)
 
         log.debug("Updated info for food with id '%s'", food_id)
         return FoodDetailed.model_validate(updated_food_item)
+    except IntegrityError as ie:
+        log.error(
+            "Failed to update FoodItem  id '%s'. IntegrityError raised: %s", food_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to update FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update FoodItem. Unexpected SQLAlchemyError raised",
+        )
     except Exception as e:
         log.error("Failed to update food with id '%s': %s", food_id, str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to updated food: {str(e)}",
-        ) from e
+            detail=f"Failed to update FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.get("/item/{food_id}", response_model=FoodDetailed, status_code=status.HTTP_200_OK)
 async def get_food_item(
-    food_id: str, current_user: User = Depends(get_current_user)) -> FoodDetailed:
+        food_id: str, current_user: User = Depends(get_current_user)) -> FoodDetailed:
     """
     Get a specific food item by ID.
     """
@@ -131,16 +160,38 @@ async def get_food_item(
         service = FoodService()
         food_item = await service.get_food_item_by_id(food_id)
 
-        if not verify_ownership(action="access", user=current_user, food_item=food_item):
-            return None
-
-        return FoodDetailed.model_validate(food_item)
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get FoodItem. Unexpected SQLAlchemyError raised",
+        )
     except Exception as e:
-        log.error("Failed to get FoodItem with id '%s': %s", food_id, str(e))
+        log.error("Failed to get food with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
+
+    if not food_item:
+        log.info("FoodItem with id '%s' requested but not found in db.")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unable to find requested FoodItem: {str(e)}",
-        ) from e
+            detail=f"FoodItem with id '{food_id}' requested but not found.",
+        )
+
+    if not verify_ownership(action="access", user=current_user, food_item=food_item):
+        return None
+
+    try:
+        return FoodDetailed.model_validate(food_item)
+    except Exception as e:
+        log.error("Failed to validate food_item Model with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate Model. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.post("/search", response_model=list[FoodDetailed], status_code=status.HTTP_200_OK)
@@ -159,12 +210,19 @@ async def search_food(query: FoodSearch, user: User = Depends(get_current_user))
             user_id=user.id
         )
         return [FoodDetailed.model_validate(food_item) for food_item in food_items]
-    except Exception as e:
-        log.error("Failed to search for FoodItems: %s", str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Unable to search for food item. Unexpected SQLAlchemyError raised: %s", str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to search FoodItems: {str(e)}",
-        ) from e
+            detail="Unable to search for food item. Unexpected SQLAlchemyError raised.",
+        )
+    except Exception as e:
+        log.error("Unable to search for food item. Unexpected SQLAlchemyError raised: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to search for food item. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.delete("/item/{food_id}", status_code=status.HTTP_200_OK)
@@ -193,12 +251,27 @@ async def delete_food(food_id: str, current_user: User = Depends(get_current_use
             )
     except HTTPException:
         raise
-    except Exception as e:
-        log.error("Failed to delete FoodItem with id '%s': %s", food_id, str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to delete FoodItem  id '%s'. IntegrityError raised: %s", food_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to delete FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to delete FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to delete food item: {str(e)}",
-        ) from e
+            detail="Failed to delete FoodItem. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to delete food with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
+
 
 
 @router.get("/last_logged", response_model=list[FoodDetailed], status_code=status.HTTP_200_OK)
@@ -220,16 +293,19 @@ async def get_last_logged(n_items: int = Query(...),
 
         return [FoodDetailed.model_validate(food_item) for food_item in food_items]
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error("Failed to get last %s logged Food items for user with id '%s': %s",
-                  n_items, current_user.id, str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get last logged FoodItems for user with id '%s'. Unexpected SQLAlchemyError raised: %s", current_user.id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get {n_items} last logged Food items for user with id " +
-            f"'{current_user.id}': {str(e)}",
-        ) from e
+            detail=f"Failed to get last logged FoodItems for user with id '{current_user.id}'. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get last logged FoodItems for user with id '%s': %s", current_user.id, str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get last logged FoodItems for user with id '{current_user.id}'. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.put("/item/{food_id}/image", response_model=RequestImage, status_code=status.HTTP_200_OK)
@@ -287,18 +363,33 @@ async def update_food_image(food_id: str, file: UploadFile = File(...),
 
     except HTTPException:
         raise
-    except Exception as e:
+    except IntegrityError as ie:
         log.error(
-            "Failed to update food image for food item with id '%s': %s", food_id, str(e))
+            "Failed to update image for FoodItem id '%s'. IntegrityError raised: %s", food_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to update image for FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update image for FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update food image: {str(e)}",
-        ) from e
+            detail="Failed to update image for FoodItem. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to update image for FoodItem with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update image for FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
+
+
 
 @router.put("/item/{food_id}/image_from_url", response_model=RequestImage,
             status_code=status.HTTP_200_OK)
 async def update_food_image_from_url(food_id: str, image_url: ImageUrl,
-                            current_user: User = Depends(get_current_user)):
+                                     current_user: User = Depends(get_current_user)):
     """
     Update the image for a specific food item from a URL.
 
@@ -351,13 +442,27 @@ async def update_food_image_from_url(food_id: str, image_url: ImageUrl,
 
     except HTTPException:
         raise
-    except Exception as e:
+    except IntegrityError as ie:
         log.error(
-            "Failed to update food image for food item with id '%s' from URL: %s", food_id, str(e))
+            "Failed to update image for FoodItem id '%s'. IntegrityError raised: %s", food_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to update image for FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update image for FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update food image from URL: {str(e)}",
-        ) from e
+            detail="Failed to update image for FoodItem. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to update image for FoodItem with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update image for FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
+
 
 
 @router.get("/item/{food_id}/image", response_class=FileResponse, status_code=status.HTTP_200_OK)
@@ -409,18 +514,24 @@ async def get_food_image(food_id: str, size: ImageSize = Query(ImageSize.THUMBNA
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to get file path for image",
             )
-
+        
         return FileResponse(path=file_path)
 
-    except HTTPException:
-        raise
-    except Exception as e:
+    except HTTPException as he:
+        raise he
+    except SQLAlchemyError as sae:
         log.error(
-            "Failed to update food image for food item with id '%s': %s", food_id, str(e))
+            "Failed to get image for FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update food image: {str(e)}",
-        ) from e
+            detail=f"Failed to get image for FoodItem  '{food_id}'. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get image for food with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get image for FoodItem  '{food_id}'. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 @router.delete("/item/{food_id}/image", status_code=status.HTTP_200_OK)
 async def delete_food_image(food_id: str, current_user: User = Depends(get_current_user)):
@@ -463,10 +574,23 @@ async def delete_food_image(food_id: str, current_user: User = Depends(get_curre
 
     except HTTPException:
         raise
-    except Exception as e:
+    except IntegrityError as ie:
         log.error(
-            "Failed to update food image for food item with id '%s': %s", food_id, str(e))
+            "Failed to delete image for FoodItem id '%s'. IntegrityError raised: %s", food_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to delete image for FoodItem. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to delete image for FoodItem with id '%s'. Unexpected SQLAlchemyError raised: %s", food_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update food image: {str(e)}",
-        ) from e
+            detail="Failed to delete image for FoodItem. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to delete image for FoodItem with id '%s': %s", food_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete image for FoodItem. Unexpected {str(type(e).__name__)} error raised",
+        )
