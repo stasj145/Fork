@@ -1,6 +1,6 @@
 """Constants for Fork Backend"""
 
-VERSION = "0.9"
+VERSION = "0.9.1"
 
 OPENFOODFACTS_USER_AGENT = "Fork/" + VERSION
 
