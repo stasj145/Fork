@@ -1,11 +1,12 @@
 """User management endpoints"""
+# pylint: disable=raise-missing-from
 
 import os
 from datetime import date
 from typing import Optional
-from fastapi import APIRouter, status, Depends, HTTPException, Query
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from fastapi import APIRouter, status, Depends, HTTPException, Query
 
 from fork_backend.core.logging import get_logger
 from fork_backend.api.dependencies import get_current_user
@@ -70,32 +71,51 @@ async def create_user(user_info: UserCreate):
             email=user_info.email,
             password=user_info.password,
         )
-    except IntegrityError as e:
-        # Check specifically for unique constraint violations (like email already exists)
-        log.error("Conflict error during user registration: %s", str(e))
-        # pylint: disable=raise-missing-from
+    except IntegrityError as ie:
+        log.error(
+            "Failed to create new user. IntegrityError raised: %s", str(ie))
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A user with this email or username already exists."
+            detail="Unable to create user. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to create new user. Unexpected SQLAlchemyError raised: %s", str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create user. Unexpected SQLAlchemyError raised",
         )
     except Exception as e:
         log.error("Failed to create new user: %s", str(e))
-        # pylint: disable=raise-missing-from
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to create user",
+            detail=f"Unable to create user. Unexpected {str(type(e).__name__)} error raised",
         )
 
     # create initial goals
     goals: Goals = Goals(user_id = new_user.id, **user_info.goals.model_dump())
     try:
         await service.create_goals(goals = goals)
-    except Exception as e:
-        log.error("Failed to create new goals: %s", str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to create goals for user '%s'. IntegrityError raised: %s", new_user.id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Unable to create user goals. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to create goals for user '%s'. Unexpected SQLAlchemyError raised: %s", new_user.id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to create new goals",
-        ) from e
+            detail="Unable to create user goals. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to create goals for user '%s': %s", new_user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to create user goals. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.patch("/{user_id}", response_model=UserInDB, status_code=status.HTTP_200_OK)
@@ -132,12 +152,26 @@ async def update_user(user_id: str, user_info: UserUpdate,
         ret_user = UserInDB.model_validate(updated_user)
         ret_user.goals = GoalsBase.model_validate(updated_user.goals[0])
         return ret_user
-    except Exception as e:
-        log.error("Failed to update user with id '%s': %s", user_id, str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to update user '%s'. IntegrityError raised: %s", user_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Unable to update user. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update user '%s'. Unexpected SQLAlchemyError raised: %s", user_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to updated user",
-        ) from e
+            detail="Unable to update user. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to update user '%s': %s", user_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unable to update user. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.get("/{user_id}", response_model=UserInDB, status_code=status.HTTP_200_OK)
@@ -153,15 +187,28 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user))
     try:
         user = await service.get_user_by_id(user_id)
 
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
         ret_user = UserInDB.model_validate(user)
         ret_user.goals = GoalsBase.model_validate(user.goals[0])
         return ret_user
-    except Exception as e:
-        log.error("Failed to get user with id '%s': %s", user_id, str(e))
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get user '%s'. Unexpected SQLAlchemyError raised: %s", user_id, str(sae))
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Unable to find requested user: {str(e)}",
-        ) from e
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get user. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get user '%s': %s", user_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user. Unexpected {str(type(e).__name__)} error raised",
+        )
 
 
 @router.put("/{user_id}/weight-history", response_model=list[WeigthHistory], status_code=status.HTTP_200_OK)
@@ -187,9 +234,23 @@ async def update_weight_history(user_id: str,
             weight_history_list=weight_history_list
         )
         return updated_weight_history
-    except Exception as e:
-        log.error("Failed to update weight history for user with id '%s': %s", user_id, str(e))
+    except IntegrityError as ie:
+        log.error(
+            "Failed to update weight history for user '%s'. IntegrityError raised: %s", user_id, str(ie))
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Failed to update weight history. IntegrityError raised",
+        )
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to update weight history for user '%s'. Unexpected SQLAlchemyError raised: %s", user_id, str(sae))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to update weight history: {str(e)}",
-        ) from e
+            detail="Failed to update weight history. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to update weight history for user '%s': %s", user_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update weight history. Unexpected {str(type(e).__name__)} error raised",
+        )
