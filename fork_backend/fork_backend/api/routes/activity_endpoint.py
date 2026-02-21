@@ -212,5 +212,5 @@ async def delete_activity(activity_id: str, current_user: User = Depends(get_cur
         log.error("Failed to delete Activity with id '%s': %s", activity_id, str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unable to delete activity.",
+            detail="Unable to delete activity. Unexpected {str(type(e).__name__)} error raised",
         ) from e
