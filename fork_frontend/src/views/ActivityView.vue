@@ -26,7 +26,42 @@
         </select>
       </div>
       <div class="results-root">
-        <span class="no-results-text" v-if="!showResults">Search for an activity to start...</span>
+        <span class="no-results-text" v-if="!showResults && !loadingLastLogged">Search for an activity to start...</span>
+        <div class="no-results" v-if="!showResults">
+          <div class="last-logged-results-container">
+            <span class="last-logged-results-container-heading">Recent activity</span>
+            <div v-if="loadingLastLogged" class="results-loading">
+              Loading recently logged activity...
+            </div>
+            <div v-else-if="lastLoggedActivity.length > 0" class="results-list">
+              <div
+                v-for="activity in lastLoggedActivity"
+                :key="activity.id"
+                class="result-item"
+                @click="selectActivity(activity)"
+              >
+                <div class="activity-item-text">
+                  <div class="activity-name">
+                    {{ activity.name }}
+                  </div>
+                  <div class="activity-summary-details">
+                    <span>
+                      {{
+                        (
+                          activity.calories_burned_kg_h *
+                          (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
+                        ).toFixed(1)
+                      }}
+                      kcal per hour (at
+                      {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span v-else>No recent activity found</span>
+          </div>
+        </div>
         <div class="results-container" v-if="showResults">
           <div v-if="loading" class="results-loading">Searching...</div>
           <div v-else-if="searchResults.length > 0" class="results-list">
@@ -88,8 +123,11 @@ const errorDetails = ref('')
 const user = ref<User | null>(null)
 const searchQuery = ref('')
 const searchResults = ref<Activity[]>([])
+const lastLoggedActivity = ref<Activity[]>([])
 const loading = ref(false)
+const loadingLastLogged = ref(false)
 const showResults = ref(false)
+const showResultsLastLogged = ref(false)
 const debounceTimer = ref<number | null>(null)
 const selectedActivity = ref<Activity | null>(null)
 const addMode = ref(false)
@@ -209,8 +247,24 @@ const handleActivityDeleted = (activityId: string) => {
   searchResults.value = searchResults.value.filter((activity) => activity.id !== activityId)
 }
 
+const getLastLoggedActivity = async () => {
+  loadingLastLogged.value = true
+  showResultsLastLogged.value = true
+
+  try {
+    const results = await fetchWrapper.get(`/api/v1/activity/last_logged?n_items=20`)
+    lastLoggedActivity.value = results || []
+  } catch (error) {
+    console.error('Last logged error:', error)
+    lastLoggedActivity.value = []
+  } finally {
+    loadingLastLogged.value = false
+  }
+}
+
 onMounted(async () => {
   loadUserData()
+  getLastLoggedActivity()
 })
 </script>
 
@@ -331,6 +385,40 @@ onMounted(async () => {
   align-items: center;
 }
 
+.no-results {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+}
+
+.last-logged-results-container {
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  justify-content: start;
+  width: 100%;
+  border: 1px solid var(--color-accent-secondary);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.last-logged-results-container-heading {
+  color: var(--color-text-heading);
+  background-color: var(--color-background-secondary);
+  font-weight: bold;
+  position: relative;
+  bottom: 2rem;
+  left: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-bottom: -1rem;
+  z-index: 10;
+  font-size: 2rem;
+  width: fit-content;
+}
+
 .results-container {
   display: flex;
   flex-direction: column;
@@ -344,22 +432,31 @@ onMounted(async () => {
   flex-direction: column;
   align-items: start;
   width: 100%;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
 }
 
 .result-item {
-  margin-bottom: 0.3rem;
   width: 100%;
-  padding: 0.15rem;
-  padding-left: 0.5rem;
-  border: 0.15rem solid var(--color-accent-secondary);
-  border-radius: 0.5rem;
-  background-color: var(--color-background-tertiary);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-item + .result-item {
+  border-top: 1px solid var(--color-accent-secondary);
 }
 
 .result-item:hover {
-  background-color: var(--color-accent-secondary);
+  background-color: var(--color-background-tertiary);
+  cursor: pointer;
+}
+
+.activity-item-text {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  width: 100%;
 }
 
 .activity-name {

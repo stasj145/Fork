@@ -159,7 +159,7 @@ async function addOrUpdateActivityInLog() {
 
 async function saveActivity(updatedActivity: Activity) {
   try {
-    const results: Activity = await fetchWrapper.post('/api/v1/activity/', updatedActivity)
+    const results: Activity = await fetchWrapper.post('/api/v1/activity/item/', updatedActivity)
     selectedActivity.value = results
   } catch (err) {
     if (err instanceof Error) {

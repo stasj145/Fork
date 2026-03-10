@@ -108,12 +108,12 @@ async function saveFood(updatedActivity: Activity) {
   saving.value = true
   try {
     if (creationMode.value) {
-      const results: Activity = await fetchWrapper.post('/api/v1/activity/', updatedActivity)
+      const results: Activity = await fetchWrapper.post('/api/v1/activity/item/', updatedActivity)
       creationMode.value = false
       selectedActivity.value = results
     } else {
       const results: Activity = await fetchWrapper.patch(
-        `/api/v1/activity/${updatedActivity.id}`,
+        `/api/v1/activity/item/${updatedActivity.id}`,
         updatedActivity,
       )
       selectedActivity.value = results
@@ -138,7 +138,7 @@ async function deleteFood(ActivityToDelete: Activity) {
   }
   deleting.value = true
   try {
-    await fetchWrapper.delete(`/api/v1/activity/${ActivityToDelete.id}`)
+    await fetchWrapper.delete(`/api/v1/activity/item/${ActivityToDelete.id}`)
   } catch (err) {
     if (err instanceof Error) {
       showDeletionError.value = true
