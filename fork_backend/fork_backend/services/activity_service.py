@@ -1,11 +1,15 @@
 """Service class to manipulate activities"""
 
 from typing import Optional, List
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, desc, func
+from sqlalchemy.orm import selectinload
+
 
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.activities import Activities
+from fork_backend.models.activity_log import ActivityLog
+from fork_backend.models.activity_entry import ActivityEntry
 
 log = get_logger()
 
@@ -171,3 +175,50 @@ class ActivityService:
             log.error("Failed to delete activity with id '%s': %s",
                       activity_id, e)
             raise e
+
+    async def get_last_logged(self, n_items: int, user_id: str) -> List[Activities]:
+        """
+        Get the last logged activities for a user.
+
+        :param n_items: Max number of activity items to return
+        :type n_items: int
+        :param user_id: Id of user for which to get the items
+        :type user_id: str
+        :return: Deduplicated list of last logged activities with max length n_items
+        :rtype: List[Activities]
+        """
+        try:
+            async with get_async_db() as db:
+                # Subquery to get the last log date for each activity
+                last_activity_subquery = (
+                    select(
+                        ActivityEntry.activity_id.label("a_id"),
+                        func.max(ActivityLog.date).label("max_date")
+                    )
+                    .join(ActivityLog)
+                    .filter(ActivityLog.user_id == user_id)
+                    .group_by(ActivityEntry.activity_id)
+                    .subquery()
+                )
+
+                stmt = (
+                    select(Activities)
+                    .join(
+                        last_activity_subquery,
+                        Activities.id == last_activity_subquery.c.a_id
+                    )
+                    .order_by(desc(last_activity_subquery.c.max_date))
+                    .limit(n_items)
+                )
+
+                results = await db.execute(stmt)
+                activities = results.scalars().all()
+
+                return activities
+
+        except Exception as e:
+            log.error(
+                "Failed to load last %s activities from user with id '%s': %s", n_items, user_id, e)
+            raise e
+
+        return []

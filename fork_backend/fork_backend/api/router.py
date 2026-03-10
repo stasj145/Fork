@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(run_import_in_background())
     yield
 
-app = FastAPI(title="Fork_backend API", lifespan=lifespan)
+app = FastAPI(title="Fork_backend API", lifespan=lifespan, docs_url="/api/docs")
 
 V1_PREFIX = "/api/v1"
 app.include_router(login_router, prefix=V1_PREFIX)

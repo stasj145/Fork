@@ -4,7 +4,7 @@
 from uuid import uuid4
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, status, Depends, HTTPException, Query
 
 from fork_backend.core.logging import get_logger
 from fork_backend.api.dependencies import get_current_user
@@ -40,7 +40,7 @@ def verify_ownership(action: str, user: User, activity: Activities) -> bool:
 
 # --- Endpoints ---
 
-@router.post("/", response_model=ActivityDetailed, status_code=status.HTTP_201_CREATED)
+@router.post("/item/", response_model=ActivityDetailed, status_code=status.HTTP_201_CREATED)
 async def create_activity(activity_info: ActivityCreate, user: User = Depends(get_current_user)):
     """
     Create a new activity.
@@ -73,7 +73,7 @@ async def create_activity(activity_info: ActivityCreate, user: User = Depends(ge
         )
 
 
-@router.patch("/{activity_id}", response_model=ActivityDetailed, status_code=status.HTTP_200_OK)
+@router.patch("/item/{activity_id}", response_model=ActivityDetailed, status_code=status.HTTP_200_OK)
 async def update_activity(activity_id: str, activity_info: ActivityUpdate,
                           current_user: User = Depends(get_current_user)) -> ActivityDetailed:
     """
@@ -118,7 +118,7 @@ async def update_activity(activity_id: str, activity_info: ActivityUpdate,
         ) from e
 
 
-@router.get("/{activity_id}", response_model=ActivityDetailed, status_code=status.HTTP_200_OK)
+@router.get("/item/{activity_id}", response_model=ActivityDetailed, status_code=status.HTTP_200_OK)
 async def get_activity(activity_id: str, current_user: User = Depends(get_current_user)) -> ActivityDetailed:
     """
     Get a specific activity by ID.
@@ -175,7 +175,7 @@ async def search_activities(query: ActivitySearch, user: User = Depends(get_curr
         )
 
 
-@router.delete("/{activity_id}", status_code=status.HTTP_200_OK)
+@router.delete("/item/{activity_id}", status_code=status.HTTP_200_OK)
 async def delete_activity(activity_id: str, current_user: User = Depends(get_current_user)):
     """
     Delete a specific activity by ID.
@@ -214,3 +214,38 @@ async def delete_activity(activity_id: str, current_user: User = Depends(get_cur
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unable to delete activity. Unexpected {str(type(e).__name__)} error raised",
         ) from e
+
+
+@router.get("/last_logged", response_model=list[ActivityDetailed], status_code=status.HTTP_200_OK)
+async def get_last_logged(n_items: int = Query(...),
+                          current_user: User = Depends(get_current_user)):
+    """
+    Get the last logged activity items
+
+    :param n_items: Number of items to return
+    :type n_items: int
+    :return: List of last logged activity items
+    :rtype: List[ActivityDetailed]
+    """
+    try:
+        service = ActivityService()
+        activities = await service.get_last_logged(
+            n_items=n_items,
+            user_id=current_user.id)
+
+        return [ActivityDetailed.model_validate(activity) for activity in activities]
+
+    except SQLAlchemyError as sae:
+        log.error(
+            "Failed to get last logged Activities for user with id '%s'. Unexpected SQLAlchemyError raised: %s", current_user.id, str(sae))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get last logged Activities for user with id '{current_user.id}'. Unexpected SQLAlchemyError raised",
+        )
+    except Exception as e:
+        log.error("Failed to get last logged Activities for user with id '%s': %s", current_user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get last logged Activities for user with id '{current_user.id}'. Unexpected {str(type(e).__name__)} error raised",
+        )
+
