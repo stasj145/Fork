@@ -175,7 +175,7 @@ async def get_food_item(
         )
 
     if not food_item:
-        log.info("FoodItem with id '%s' requested but not found in db.")
+        log.info("FoodItem with id '%s' requested but not found in db.", food_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"FoodItem with id '{food_id}' requested but not found.",

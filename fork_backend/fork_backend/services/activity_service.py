@@ -2,8 +2,6 @@
 
 from typing import Optional, List
 from sqlalchemy import select, and_, desc, func
-from sqlalchemy.orm import selectinload
-
 
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
