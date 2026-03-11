@@ -1,13 +1,14 @@
 """Service class to manipulate activities"""
 
 from typing import Optional, List
-from sqlalchemy import select, and_, desc, func
+from sqlalchemy import select, and_, or_, desc, func
 
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.activities import Activities
 from fork_backend.models.activity_log import ActivityLog
 from fork_backend.models.activity_entry import ActivityEntry
+from fork_backend.models.sources import ActivitySources
 
 log = get_logger()
 
@@ -113,6 +114,7 @@ class ActivityService:
         self,
         user_id: str,
         query: Optional[str] = None,
+        source: ActivitySources = ActivitySources.LOCAL,
         limit: int = 20,
     ) -> List[Activities]:
         """
@@ -120,6 +122,8 @@ class ActivityService:
 
         :param user_id: The id of the user.
         :param query: The search query.
+        :param source: Source to search in (LOCAL or PERSONAL).
+            Defaults to LOCAL.
         :param limit: Maximum number of results to return.
         :return: A list of Activities matching the query.
         """
@@ -128,17 +132,35 @@ class ActivityService:
                 return await self.get_activities_by_user(user_id)
 
             async with get_async_db() as db:
-                stmt = select(Activities).where(
-                    and_(
-                        Activities.name.ilike(f"%{query}%")
+                # pylint: disable=singleton-comparison
+                if source == ActivitySources.LOCAL:
+                    stmt = select(Activities).where(
+                        and_(
+                            Activities.name.ilike(f"%{query}%"),
+                            or_(
+                                Activities.user_id == user_id,
+                                Activities.private == False
+                            )
+                        )
                     )
-                )
+                elif source == ActivitySources.PERSONAL:
+                    stmt = select(Activities).where(
+                        and_(
+                            Activities.name.ilike(f"%{query}%"),
+                            Activities.user_id == user_id,
+                        )
+                    )
+                else:
+                    log.error("Unknown activity source selected '%s'", source)
+                    raise ValueError(
+                        f"Unknown activity source selected '{source}'")
 
                 stmt = stmt.limit(limit)
 
                 result = await db.execute(stmt)
                 activities = result.scalars().all()
-                log.debug("Search for '%s' returned %d results", query, len(activities))
+                log.debug("Search for '%s' returned %d results",
+                          query, len(activities))
                 return activities
 
         except Exception as e:

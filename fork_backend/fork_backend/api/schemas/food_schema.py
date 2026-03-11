@@ -4,15 +4,16 @@ from typing import Optional, List
 from pydantic import Field
 
 from fork_backend.api.schemas.base_schema import ForkBaseSchema
-from fork_backend.models.food_sources import Sources
+from fork_backend.models.sources import FoodSources
 
 
 class FoodIngredientBase(ForkBaseSchema):
     """Association model linking FoodItems to their sub-items with quantity"""
 
     quantity: float = Field(..., examples=[150.0])
-    ingredient: Optional["FoodInDB"] = Field(None,
-                                 description="The FoodInDB that represents the actual ingredient")
+    ingredient: Optional["FoodInDB"] = Field(
+        None,
+        description="The FoodInDB that represents the actual ingredient")
 
 
 class FoodIngredientInDB(FoodIngredientBase):
@@ -28,7 +29,7 @@ class FoodIngredientCreate(ForkBaseSchema):
     """Association model linking FoodItems to their sub-items with quantity"""
 
     parent_id: Optional[str] = Field(None, examples=[
-                           "123e4567-e89b-12d3-a456-426614174000"])
+        "123e4567-e89b-12d3-a456-426614174000"])
     ingredient_id: str = Field(..., examples=[
                                "123e4567-e89b-12d3-a456-426614174000"])
     quantity: float = Field(..., examples=[150.0])
@@ -47,11 +48,13 @@ class FoodBase(ForkBaseSchema):
     carbs_per_100: float = Field(0.0, examples=[14.4])
     fat_per_100: float = Field(0.0, examples=[0.1])
 
+
 class FoodCreate(FoodBase):
     """Properties to receive via API on creation"""
     private: bool = Field(False, examples=[False])
     hidden: Optional[bool] = Field(None, examples=[False])
-    barcode: Optional[str] = Field(None, max_length=50, examples=["0123456789123"])
+    barcode: Optional[str] = Field(
+        None, max_length=50, examples=["0123456789123"])
     ingredients: Optional[list[FoodIngredientCreate]] = Field(
         None, description="All, if any, ingredients of the food")
 
@@ -86,6 +89,7 @@ class FoodInDB(FoodBase):
     img_name: Optional[str] = Field(None, max_length=40,
                                     examples=["123e4567-e89b-12d3-a456-426614174000.jpg"])
 
+
 class FoodDetailed(FoodInDB):
     """
     Includes ingredients
@@ -97,14 +101,15 @@ class FoodDetailed(FoodInDB):
     external_image_url: Optional[str] = Field(
         None,
         examples=[
-        "https://images.openfoodfacts.org/images/products/000/005/402/2263/front_en.11.200.jpg"])
+            "https://images.openfoodfacts.org/images/products/000/005/402/2263/front_en.11.200.jpg"])
+
 
 class FoodSearch(ForkBaseSchema):
     """Properties for searching for food"""
     query: Optional[str] = Field(None, examples=["Nutella"])
     code: Optional[str] = Field(None, examples=["3017620422003"])
-    source: Optional[Sources] = Field(
-        Sources.LOCAL, examples=[Sources.LOCAL, Sources.OPENFOODFACTS])
+    source: Optional[FoodSources] = Field(
+        FoodSources.LOCAL, examples=[FoodSources.LOCAL, FoodSources.OPENFOODFACTS])
     limit: Optional[int] = Field(20, examples=[20])
 
 

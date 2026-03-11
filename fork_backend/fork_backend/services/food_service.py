@@ -13,7 +13,7 @@ from fork_backend.core.constants import OPENFOODFACTS_USER_AGENT, FOOD_ID_PLACEH
 from fork_backend.core.db import get_async_db
 from fork_backend.core.logging import get_logger
 from fork_backend.models.food_item import FoodItem, FoodItemIngredient
-from fork_backend.models.food_sources import Sources
+from fork_backend.models.sources import FoodSources
 from fork_backend.models.food_log import FoodLog
 from fork_backend.models.food_entry import FoodEntry
 from fork_backend.services.image_service import ImageService
@@ -216,7 +216,7 @@ class FoodService:
         user_id: str,
         query: Optional[str] = None,
         code: Optional[str] = None,
-        source: Sources = Sources.LOCAL,
+        source: FoodSources = FoodSources.LOCAL,
         limit: int = 20,
         min_similarity: float = 0.3,
     ) -> list[FoodItem]:
@@ -262,20 +262,20 @@ class FoodService:
             log.error(err_msg)
             raise ValueError(err_msg)
 
-        if (source == Sources.LOCAL or source == Sources.PERSONAL) and query:
+        if (source == FoodSources.LOCAL or source == FoodSources.PERSONAL) and query:
             return await self.semantic_search_food_items_local(
                 query=query,
                 user_id=user_id,
                 limit=limit,
-                private_only=True if source == Sources.PERSONAL else False,
+                private_only=True if source == FoodSources.PERSONAL else False,
                 min_similarity=min_similarity)
-        if source == Sources.OPENFOODFACTS and query:
+        if source == FoodSources.OPENFOODFACTS and query:
             return await self.semantic_search_food_items_open_food_facts(
                 query=query,
                 user_id=user_id,
                 limit=limit,
             )
-        if source == Sources.TANDOOR and query:
+        if source == FoodSources.TANDOOR and query:
             return await self.semantic_search_food_items_tandoor(
                 query=query,
                 user_id=user_id,
