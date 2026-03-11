@@ -518,7 +518,7 @@ async function addFoodEntries(entries: FoodEntry[]) {
 
 async function addActivityEntries(entries: ActivityEntry[]) {
   disableChartAnimation.value = true
-  activityLog.value?.activity_entries.concat(entries)
+  activityLog.value?.activity_entries.push(...entries)
 }
 
 onMounted(async () => {
