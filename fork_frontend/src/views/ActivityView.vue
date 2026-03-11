@@ -26,7 +26,9 @@
         </select>
       </div>
       <div class="results-root">
-        <span class="no-results-text" v-if="!showResults && !loadingLastLogged">Search for an activity to start...</span>
+        <span class="no-results-text" v-if="!showResults && !loadingLastLogged"
+          >Search for an activity to start...</span
+        >
         <div class="no-results" v-if="!showResults">
           <div class="last-logged-results-container">
             <span class="last-logged-results-container-heading">Recent activity</span>
@@ -493,6 +495,11 @@ onMounted(async () => {
 
   .activity-view-content {
     min-height: calc(var(--main-content-height) - 1rem);
+  }
+
+  .last-logged-results-container-heading {
+    font-size: 1.5rem;
+    bottom: 1.6rem;
   }
 
   .button-root {
