@@ -1,4 +1,4 @@
-
+"""Main entry point"""
 
 from fork_backend.api.router import app as fastapi_app
 from fork_backend.core.db import init_db
