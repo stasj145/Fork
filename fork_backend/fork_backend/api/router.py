@@ -20,13 +20,19 @@ async def run_import_in_background():
     await import_food()
     await import_exercise_activities()
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Start the import process in the background """
     asyncio.create_task(run_import_in_background())
     yield
 
-app = FastAPI(title="Fork_backend API", lifespan=lifespan, docs_url="/api/docs")
+app = FastAPI(title="Fork_backend API",
+              lifespan=lifespan,
+              docs_url="/api/docs",
+              openapi_url="/api/openapi.json",
+              redoc_url="/api/redoc",
+              )
 
 V1_PREFIX = "/api/v1"
 app.include_router(login_router, prefix=V1_PREFIX)
@@ -35,6 +41,7 @@ app.include_router(food_router, prefix=V1_PREFIX)
 app.include_router(food_log_router, prefix=V1_PREFIX)
 app.include_router(activity_router, prefix=V1_PREFIX)
 app.include_router(activity_log_router, prefix=V1_PREFIX)
+
 
 @app.get("/")
 def read_root():
