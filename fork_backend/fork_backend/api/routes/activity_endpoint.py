@@ -32,7 +32,7 @@ def verify_ownership(action: str, user: User, activity: Activities) -> bool:
         return True
     if action == "delete" and user.id == activity.user_id:
         return True
-    if action == "access":
+    if action == "access" and (user.id == activity.user_id or not activity.private):
         return True
 
     raise HTTPException(
