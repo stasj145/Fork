@@ -211,6 +211,12 @@
           </div>
         </div>
       </div>
+      <div class="onboarding-btn-container">
+        <button class="btn-onboarding" @click="goToOnboarding()">
+          <IconProfile class="btn-icon"></IconProfile>
+          <span class="btn-onboarding-text">Rerun Profile Setup</span>
+        </button>
+      </div>
       <div class="logout-btn-container">
         <button class="btn-logout" @click="logout()" :disabled="saving">
           <div class="btn-logout-content">
@@ -276,6 +282,7 @@ import IconSave from '@/components/icons/IconSave.vue'
 import IconCancel from '@/components/icons/IconCancel.vue'
 import IconPassword from '@/components/icons/IconPassword.vue'
 import IconLogout from '@/components/icons/IconLogout.vue'
+import IconProfile from '@/components/icons/IconProfile.vue'
 import { getFormattedDateToday } from '@/helpers/utils'
 
 const router = useRouter()
@@ -388,6 +395,10 @@ const saveWeightHistory = async (updatedHistory: WeightHistory[]) => {
       errorDetails.value = err.message || err.toString() || 'Unknown error'
     }
   }
+}
+
+const goToOnboarding = () => {
+  router.push('/onboarding')
 }
 </script>
 
@@ -525,6 +536,42 @@ input:focus {
   background-color: var(--color-accent-secondary);
   border: 1px solid var(--color-accent-secondary);
   border-radius: 1rem;
+}
+
+.onboarding-btn-container {
+  height: 3rem;
+  align-self: start;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-onboarding {
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  background-color: var(--color-accent-secondary);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--color-text-primary);
+  transition: opacity 0.2s;
+}
+
+.btn-onboarding:hover {
+  opacity: 0.9;
+}
+
+.btn-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.btn-onboarding-text {
+  font-weight: bold;
 }
 
 .logout-btn-container {
