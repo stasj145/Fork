@@ -10,6 +10,7 @@ export interface User {
   gender: string
   activity_level: string
   goals: Goals
+  onboarding_finished: boolean
 }
 
 export interface Goals {

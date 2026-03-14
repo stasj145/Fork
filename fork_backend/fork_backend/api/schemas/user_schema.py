@@ -55,8 +55,10 @@ class UserUpdate(ForkBaseSchema):
     gender: Optional[Gender] = Field(None, examples=[Gender.MALE, Gender.FEMALE])
     activity_level: Optional[ActivityLevels] = Field(None, examples=[
         ActivityLevels.SEDENTARY])
+    onboarding_finished: Optional[bool] = Field(None, examples=[True, False])
 
 
 class UserInDB(UserBase):
     """Properties stored in DB (excluding pw hash)"""
     id: str = Field(..., examples=["123e4567-e89b-12d3-a456-426614174000"])
+    onboarding_finished: bool = Field(..., examples=[True, False])

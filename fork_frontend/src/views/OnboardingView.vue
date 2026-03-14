@@ -170,6 +170,7 @@ const saveProfile = async () => {
       gender: formData.value.gender,
       activity_level: formData.value.activity_level,
       goals: formData.value.goals,
+      onboarding_finished: true,
     }
 
     await fetchWrapper.patch(

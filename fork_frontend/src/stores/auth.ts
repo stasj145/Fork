@@ -1,14 +1,14 @@
 import { defineStore } from 'pinia'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
 
-export interface User {
+export interface LoginUser {
   access_token: string
   token_type: string
-  user_id: string
+  user_id: string,
 }
 
 interface AuthState {
-  user: User | null
+  user: LoginUser | null
   returnUrl: string | null
 }
 
@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', {
 
         const response = await fetchWrapper.post('/api/v1/auth/login', formData)
 
-        const user: User = {
+        const user: LoginUser = {
           access_token: response.access_token,
           token_type: response.token_type,
           user_id: response.user_id,

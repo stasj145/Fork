@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 from datetime import date
-from sqlalchemy import String, Float, Integer, Enum as SQLEnum, Date, ForeignKey
+from sqlalchemy import String, Float, Integer, Enum as SQLEnum, Date, ForeignKey, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from fork_backend.models.base import Base
@@ -22,6 +22,7 @@ class User(Base):
     gender: Mapped[Gender] = mapped_column(SQLEnum(Gender), nullable=False, default=Gender.MALE)
     activity_level: Mapped[ActivityLevels] = mapped_column(
         SQLEnum(ActivityLevels), nullable=False, default=ActivityLevels.SEDENTARY)
+    onboarding_finished: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     food_log: Mapped[list["FoodLog"]] = relationship(back_populates="user",
                                                    cascade="all, delete-orphan")

@@ -41,6 +41,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import type { User } from '@/types/user'
+import { fetchWrapper } from '@/helpers/fetch-wrapper'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -53,6 +55,12 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 
+const isOnboadringFinished = async (user_id: string) => {
+  const response: User = await fetchWrapper.get(`/api/v1/user/${user_id}`)
+  console.log(response)
+  return response.onboarding_finished
+}
+
 const handleLogin = async () => {
   if (!form.value.username || !form.value.password) {
     error.value = 'Please fill in all fields'
@@ -63,8 +71,12 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    await authStore.login(form.value.username, form.value.password)
-    router.push('/today')
+    const user_info = await authStore.login(form.value.username, form.value.password)
+    if (!(await isOnboadringFinished(user_info.user_id))) {
+      router.push('/onboarding')
+    } else {
+      router.push('/today')
+    }
   } catch (err: any) {
     error.value = err.message || 'Login failed'
   } finally {
