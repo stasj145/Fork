@@ -143,11 +143,11 @@ const hasPhysicalData = computed(() => {
 })
 
 // Macro suggestions based on user data
-// Protein: 1.5g per kg body weight
+// Protein: 1.7g per kg body weight
 // Fat: 25% of total calories
 // Carbs: remaining calories
 
-const weightBasedProtein = 1.5 // g per kg body weight
+const weightBasedProtein = 1.7 // g per kg body weight
 
 const suggestedProtein = computed(() => {
   if (!hasPhysicalData.value) return 0

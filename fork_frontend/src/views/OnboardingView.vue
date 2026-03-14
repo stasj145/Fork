@@ -282,7 +282,7 @@ onMounted(async () => {
 
 .progress-fill {
   height: 100%;
-  background-color: var(--color-accent-primary);
+  background-color: var(--color-accent-secondary);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -307,7 +307,9 @@ onMounted(async () => {
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
 }
 
 .nav-button:disabled {
@@ -322,16 +324,16 @@ onMounted(async () => {
 }
 
 .nav-button-secondary:not(:disabled):hover {
-  background-color: var(--color-accent-secondary);
+  opacity: 0.8;
 }
 
 .nav-button-primary {
-  background-color: var(--color-accent-primary);
-  color: white;
+  background-color: var(--color-accent-secondary);
+  color: var(--color-text-primary);
 }
 
 .nav-button-primary:not(:disabled):hover {
-  opacity: 0.9;
+  background-color: var(--color-accent-primary);
 }
 
 .skip-button {
@@ -399,8 +401,11 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
+  .onboarding-root {
+    padding: 0.5rem;
+  }
   .onboarding-container {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .onboarding-title {

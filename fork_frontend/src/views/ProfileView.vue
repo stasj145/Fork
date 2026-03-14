@@ -577,8 +577,6 @@ input:focus {
 .logout-btn-container {
   height: 3rem;
   align-self: start;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 .btn-logout {
   width: 100%;

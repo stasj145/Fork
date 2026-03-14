@@ -31,8 +31,8 @@
         </div>
         <p class="calculation-hint">
           Your TDEE is the number of calories you burn per day based on your activity level. To lose
-          weight, consume fewer calories than your TDEE. To gain weight, consume more. Based on
-          7,700 kcal ≈ 1 kg of body fat.
+          weight, consume fewer calories than your TDEE. To gain weight, consume more. Estimated
+          weight change based on 7,700 kcal ≈ 1 kg of body fat.
         </p>
       </div>
     </div>
@@ -145,7 +145,6 @@ const bmi = computed(() => {
   return (props.formData.weight / (heightInMeters * heightInMeters)).toFixed(1)
 })
 
-// Get BMI category
 const bmiCategory = computed(() => {
   const bmiValue = parseFloat(bmi.value as string)
   if (bmiValue === 0) return ''
@@ -375,5 +374,13 @@ const weightChangeClass = computed(() => {
 
 .weight-gain-slight {
   color: #84cc16 !important;
+}
+
+@media (max-width: 480px) {
+  .calculation-item {
+    flex-direction: column;
+    align-items: start;
+    gap: 0.25rem;
+  }
 }
 </style>
