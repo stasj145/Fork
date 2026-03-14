@@ -134,7 +134,6 @@ async function saveFood(updatedFood: Food) {
     }
 
     if (creationMode.value || selectedFood.value.id == placeholder_id) {
-      console.log('Creating new food...')
       const results: Food = await fetchWrapper.post('/api/v1/food/item/', updatedFood)
 
       // Clone to prevent background reactivity from overwriting it
