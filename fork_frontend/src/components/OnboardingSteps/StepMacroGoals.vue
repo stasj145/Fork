@@ -53,6 +53,26 @@
       </div>
 
       <div class="form-group">
+        <label for="daily_fat_target">Daily Fat Target</label>
+        <div class="input-with-icon">
+          <IconFat class="input-icon"></IconFat>
+          <input
+            id="daily_fat_target"
+            :value="formData.goals.daily_fat_target"
+            @input="updateGoalField('daily_fat_target', ($event.target as HTMLInputElement).value)"
+            type="number"
+            min="0"
+            max="1000"
+            step="10"
+            placeholder="e.g., 70"
+          />
+        </div>
+        <div class="input-hint" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
+          Suggested: {{ suggestedFat }} g ({{ fatPercentage }}% of calories)
+        </div>
+      </div>
+
+      <div class="form-group">
         <label for="daily_carbs_target">Daily Carbohydrates Target</label>
         <div class="input-with-icon">
           <IconCarbs class="input-icon"></IconCarbs>
@@ -71,26 +91,6 @@
         </div>
         <div class="input-hint" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
           Suggested: {{ suggestedCarbs }} g ({{ carbsPercentage }}% of calories)
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="daily_fat_target">Daily Fat Target</label>
-        <div class="input-with-icon">
-          <IconFat class="input-icon"></IconFat>
-          <input
-            id="daily_fat_target"
-            :value="formData.goals.daily_fat_target"
-            @input="updateGoalField('daily_fat_target', ($event.target as HTMLInputElement).value)"
-            type="number"
-            min="0"
-            max="1000"
-            step="10"
-            placeholder="e.g., 70"
-          />
-        </div>
-        <div class="input-hint" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
-          Suggested: {{ suggestedFat }} g ({{ fatPercentage }}% of calories)
         </div>
       </div>
     </div>
