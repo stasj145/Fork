@@ -57,7 +57,6 @@ const error = ref('')
 
 const isOnboadringFinished = async (user_id: string) => {
   const response: User = await fetchWrapper.get(`/api/v1/user/${user_id}`)
-  console.log(response)
   return response.onboarding_finished
 }
 

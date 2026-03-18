@@ -147,7 +147,6 @@ async function saveFood(updatedFood: Food) {
       )
       finalFood = { ...results, img_src: updatedFood.img_src }
     }
-
     selectedFood.value = finalFood
 
     if (updatedFood.external_image_url) {

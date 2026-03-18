@@ -43,10 +43,10 @@
             </div>
             <div v-else-if="lastLoggedFood.length > 0" class="results-list">
               <div
-                v-for="food in lastLoggedFood"
+                v-for="(food, index) in lastLoggedFood"
                 :key="food.id"
                 class="result-item"
-                @click="selectFood(food)"
+                @click="selectFood(index)"
               >
                 <div class="food-item-text">
                   <div class="food-name">
@@ -74,10 +74,10 @@
           <div v-if="loading" class="results-loading">Searching...</div>
           <div v-else-if="searchResults.length > 0" class="results-list">
             <div
-              v-for="food in searchResults"
+              v-for="(food, index) in searchResults"
               :key="food.id"
               class="result-item"
-              @click="selectFood(food)"
+              @click="selectFood(index)"
             >
               <div class="food-item-text">
                 <div class="food-name">
@@ -150,6 +150,7 @@ const showResults = ref(false)
 const showResultsLastLogged = ref(false)
 const debounceTimer = ref<number | null>(null)
 const selectedFood = ref<Food | null>(null)
+const selectedFoodIndex = ref<number | null>(null)
 const addMode = ref(false)
 const searchType = ref('local')
 const showScanner = ref(false)
@@ -173,12 +174,28 @@ interface foodSearch {
 }
 
 function closeFoodDetails() {
+  if (!selectedFoodIndex.value) {
+    console.error('no selectedFoodIndex value set')
+  } else if (!selectedFood.value) {
+    console.error('no selectedFood value set')
+  } else if (searchResults.value[selectedFoodIndex.value]) {
+    searchResults.value[selectedFoodIndex.value] = selectedFood.value
+  } else if (lastLoggedFood.value[selectedFoodIndex.value]) {
+    lastLoggedFood.value[selectedFoodIndex.value] = selectedFood.value
+  }
+  selectedFoodIndex.value = null
   selectedFood.value = null
   addMode.value = false
 }
 
-const selectFood = (food: Food) => {
-  selectedFood.value = food
+const selectFood = (food_index: number) => {
+  if (searchResults.value[food_index]) {
+    selectedFoodIndex.value = food_index
+    selectedFood.value = searchResults.value[food_index]
+  } else if (lastLoggedFood.value[food_index]) {
+    selectedFoodIndex.value = food_index
+    selectedFood.value = lastLoggedFood.value[food_index]
+  }
 }
 
 const handleSearch = () => {
