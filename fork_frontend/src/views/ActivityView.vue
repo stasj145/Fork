@@ -54,7 +54,7 @@
                           (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
                         ).toFixed(1)
                       }}
-                      kcal per hour (at
+                      kcal/h (@
                       {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)
                     </span>
                   </div>
@@ -82,7 +82,7 @@
                       (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
                     ).toFixed(1)
                   }}
-                  kcal per hour (at
+                  kcal/h (@
                   {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)</span
                 >
               </div>
