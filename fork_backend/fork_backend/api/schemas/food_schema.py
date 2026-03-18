@@ -39,7 +39,7 @@ class FoodBase(ForkBaseSchema):
     """Shared properties"""
     name: str = Field(..., max_length=255, examples=["Apple"])
     brand: str = Field("Generic", max_length=255, examples=["Generic"])
-    description: str = Field(None, max_length=1000,
+    description: str = Field(None, max_length=10000,
                              examples=["A delicious fruit."])
     serving_size: float = Field(150.0, examples=[150.0])
     serving_unit: str = Field("serving", max_length=20, examples=["g"])
@@ -68,7 +68,7 @@ class FoodUpdate(ForkBaseSchema):
         None, max_length=50, examples=["0123456789123"])
     brand: Optional[str] = Field(None, max_length=255, examples=["Generic"])
     description: Optional[str] = Field(
-        None, max_length=1000, examples=["A delicious fruit."])
+        None, max_length=10000, examples=["A delicious fruit."])
     serving_size: Optional[float] = Field(None, examples=[150.0])
     serving_unit: Optional[str] = Field(None, max_length=20, examples=["g"])
     calories_per_100: Optional[float] = Field(None, examples=[54.0])
