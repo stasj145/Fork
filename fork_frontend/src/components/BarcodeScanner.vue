@@ -319,6 +319,7 @@ const submitManualBarcode = () => {
 }
 
 .submit-btn {
+  width: 3rem;
   padding: 0.5rem 0.5rem;
   background-color: var(--color-accent-secondary);
   color: white;
@@ -330,7 +331,7 @@ const submitManualBarcode = () => {
 }
 
 .submit-btn .icon {
-  height: 100%;
+  width: 2rem;
   color: white;
 }
 
