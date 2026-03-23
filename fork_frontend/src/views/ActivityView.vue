@@ -73,18 +73,20 @@
               class="result-item"
               @click="selectActivity(activity)"
             >
-              <div class="activity-name">{{ activity.name }}</div>
-              <div class="activity-summary-details">
-                <span>
-                  {{
-                    (
-                      activity.calories_burned_kg_h *
-                      (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
-                    ).toFixed(1)
-                  }}
-                  kcal/h (@
-                  {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)</span
-                >
+              <div class="activity-item-text">
+                <div class="activity-name">{{ activity.name }}</div>
+                <div class="activity-summary-details">
+                  <span>
+                    {{
+                      (
+                        activity.calories_burned_kg_h *
+                        (user.weight_history[0] ? user.weight_history[0].weight : 80.0)
+                      ).toFixed(1)
+                    }}
+                    kcal/h (@
+                    {{ user.weight_history[0] ? user.weight_history[0].weight : 80.0 }}kg)</span
+                  >
+                </div>
               </div>
             </div>
           </div>
@@ -426,6 +428,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: start;
+  padding: 0.5rem;
   width: 100%;
 }
 
