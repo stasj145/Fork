@@ -2,12 +2,14 @@
   <div class="scanner-overlay">
     <div class="scanner-container">
       <div class="scanner-header">
-        <h2>Scan Barcode</h2>
+        <h2>Search by barcode</h2>
         <button @click="closeScanner" class="close-btn">&times;</button>
       </div>
 
       <div class="scanner-content">
-        <div v-if="scanning" class="scanner-viewfinder">
+        <SegmentedControl v-model="scanMode" :options="['Scanner', 'Manual']" class="mode-toggle" />
+
+        <div v-if="scanMode === 'Scanner'" class="scanner-viewfinder">
           <StreamBarcodeReader
             @decode="onDecode"
             @loaded="onLoaded"
@@ -17,6 +19,23 @@
           <div class="viewfinder-overlay">
             <div class="viewfinder-frame"></div>
             <p class="scanner-instructions">Point your camera at a barcode</p>
+          </div>
+        </div>
+
+        <div v-else-if="scanMode === 'Manual'" class="manual-entry">
+          <label for="manual-barcode" class="manual-label">Enter Barcode Manually</label>
+          <div class="manual-input-row">
+            <input
+              id="manual-barcode"
+              v-model="manualBarcode"
+              type="text"
+              class="manual-input"
+              placeholder="Type or paste barcode here"
+              @keyup.enter="submitManualBarcode"
+            />
+            <button @click="submitManualBarcode" class="submit-btn">
+              <IconSearch class="icon"></IconSearch>
+            </button>
           </div>
         </div>
 
@@ -39,11 +58,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { StreamBarcodeReader } from '@teckel/vue-barcode-reader'
+import SegmentedControl from './SegmentedControl.vue'
+import IconSearch from './icons/IconSearch.vue'
 
 const decodedText = ref('')
 const scanning = ref(true)
 const error = ref<string | null>(null)
 const success = ref(false)
+const scanMode = ref('Scanner')
+const manualBarcode = ref('')
 
 const emit = defineEmits<{
   (e: 'barcode-scanned', barcode: string): void
@@ -84,6 +107,25 @@ const retryScan = () => {
 
 const closeScanner = () => {
   emit('close')
+}
+
+const submitManualBarcode = () => {
+  if (!manualBarcode.value.trim()) {
+    error.value = 'Please enter a barcode'
+    return
+  }
+  decodedText.value = manualBarcode.value.trim()
+  success.value = true
+  scanning.value = false
+  error.value = null
+
+  // Emit the barcode to the parent component
+  emit('barcode-scanned', decodedText.value)
+
+  // Close the scanner after a short delay
+  setTimeout(() => {
+    emit('close')
+  }, 1500)
 }
 </script>
 
@@ -238,5 +280,61 @@ const closeScanner = () => {
 
 .retry-btn:hover {
   background-color: var(--color-accent-secondary);
+}
+
+.mode-toggle {
+  margin-bottom: 1rem;
+}
+
+.manual-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.manual-label {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.manual-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.manual-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--color-accent-primary);
+  border-radius: 0.25rem;
+  background-color: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.manual-input:focus {
+  outline: none;
+  border-color: var(--color-accent-secondary);
+}
+
+.submit-btn {
+  padding: 0.5rem 0.5rem;
+  background-color: var(--color-accent-secondary);
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.submit-btn .icon {
+  height: 100%;
+  color: white;
+}
+
+.submit-btn:hover {
+  background-color: var(--color-accent-primary);
 }
 </style>
