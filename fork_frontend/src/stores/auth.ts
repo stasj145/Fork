@@ -1,14 +1,10 @@
 import { defineStore } from 'pinia'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
-
-export interface LoginUser {
-  access_token: string
-  token_type: string
-  user_id: string,
-}
+import { AuthService } from '@/services/authService'
+import type { TokenResponse } from '@/types/api/auth.types'
+import type { UserCreateRequest, UserInDB } from '@/types/api/user.types'
 
 interface AuthState {
-  user: LoginUser | null
+  user: TokenResponse | null
   returnUrl: string | null
 }
 
@@ -20,33 +16,23 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(username: string, password: string) {
       try {
-        const formData = new URLSearchParams()
-        formData.append('username', username)
-        formData.append('password', password)
+        const authService = new AuthService()
+        const response: TokenResponse = await authService.login({ username, password })
 
-        const response = await fetchWrapper.post('/api/v1/auth/login', formData)
+        this.user = response
+        localStorage.setItem('user', JSON.stringify(response))
 
-        const user: LoginUser = {
-          access_token: response.access_token,
-          token_type: response.token_type,
-          user_id: response.user_id,
-        }
-
-        this.user = user
-
-        localStorage.setItem('user', JSON.stringify(user))
-
-        return user
+        return response
       } catch (error) {
         // If login fails, remove any existing user data
         this.logout()
         throw error
       }
     },
-    async register(userData: { username: string; email: string; password: string }) {
+    async register(userData: UserCreateRequest) {
       try {
-        // Register new user
-        const user = await fetchWrapper.post('/api/v1/user/', userData)
+        const authService = new AuthService()
+        const user: UserInDB = await authService.register(userData)
         return user
       } catch (error) {
         throw error

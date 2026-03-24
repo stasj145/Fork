@@ -41,8 +41,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import type { User } from '@/types/user'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
+import { UserService } from '@/services/userService'
+
+const userService = new UserService()
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -55,9 +56,9 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 
-const isOnboadringFinished = async (user_id: string) => {
-  const response: User = await fetchWrapper.get(`/api/v1/user/${user_id}`)
-  return response.onboarding_finished
+const isOnboardingFinished = async (user_id: string) => {
+  const user = await userService.getUser(user_id)
+  return user.onboarding_finished
 }
 
 const handleLogin = async () => {
@@ -71,7 +72,7 @@ const handleLogin = async () => {
 
   try {
     const user_info = await authStore.login(form.value.username, form.value.password)
-    if (!(await isOnboadringFinished(user_info.user_id))) {
+    if (!(await isOnboardingFinished(user_info.user_id))) {
       router.push('/onboarding')
     } else {
       router.push('/today')
