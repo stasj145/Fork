@@ -44,7 +44,7 @@
           <IconCalorie class="input-icon"></IconCalorie>
           <input
             id="daily_calorie_target"
-            :value="formData.goals.daily_calorie_target"
+            :value="formData.goals!.daily_calorie_target"
             @input="
               updateGoalField('daily_calorie_target', ($event.target as HTMLInputElement).value)
             "
@@ -67,7 +67,7 @@
           <IconActiveCalories class="input-icon"></IconActiveCalories>
           <input
             id="daily_calorie_burn_target"
-            :value="formData.goals.daily_calorie_burn_target"
+            :value="formData.goals!.daily_calorie_burn_target"
             @input="
               updateGoalField(
                 'daily_calorie_burn_target',
@@ -92,30 +92,17 @@ import { computed } from 'vue'
 import IconCalorie from '@/components/icons/IconCalorie.vue'
 import IconActiveCalories from '@/components/icons/IconActiveCalories.vue'
 import IconInfo from '@/components/icons/IconInfo.vue'
-
-interface Goals {
-  daily_calorie_target: number
-  daily_calorie_burn_target: number
-}
-
-interface FormData {
-  weight: number
-  height: number
-  age: number
-  gender: string
-  activity_level: string
-  goals: Goals
-}
+import type { Gender, GoalsBase, UserUpdateRequest } from '@/types/api/user.types'
 
 const props = defineProps<{
-  formData: FormData
+  formData: UserUpdateRequest
 }>()
 
 const emit = defineEmits<{
-  update: [field: string, value: number]
+  update: [field: keyof GoalsBase, value: number]
 }>()
 
-const updateGoalField = (field: string, value: string) => {
+const updateGoalField = (field: keyof GoalsBase, value: string) => {
   emit('update', field, parseFloat(value) || 0)
 }
 
@@ -130,10 +117,14 @@ const activityMultipliers: Record<string, number> = {
 
 const hasPhysicalData = computed(() => {
   return (
+    props.formData.weight &&
+    props.formData.height &&
+    props.formData.age &&
+    props.formData.gender &&
     props.formData.weight > 0 &&
     props.formData.height > 0 &&
     props.formData.age > 0 &&
-    props.formData.gender !== ''
+    props.formData.gender !== ('' as Gender)
   )
 })
 
@@ -141,8 +132,8 @@ const hasPhysicalData = computed(() => {
 // Formula: weight (kg) / (height (m))^2
 const bmi = computed(() => {
   if (!hasPhysicalData.value) return 0
-  const heightInMeters = props.formData.height / 100
-  return (props.formData.weight / (heightInMeters * heightInMeters)).toFixed(1)
+  const heightInMeters = props.formData.height! / 100
+  return (props.formData.weight! / (heightInMeters * heightInMeters)).toFixed(1)
 })
 
 const bmiCategory = computed(() => {
@@ -162,7 +153,8 @@ const bmiCategory = computed(() => {
 // Women: (10 × weight in kg) + (6.25 × height in cm) - (5 × age in years) - 161
 const bmr = computed(() => {
   if (!hasPhysicalData.value) return 0
-  let baseBmr = 10 * props.formData.weight + 6.25 * props.formData.height - 5 * props.formData.age
+  let baseBmr =
+    10 * props.formData.weight! + 6.25 * props.formData.height! - 5 * props.formData.age!
   if (props.formData.gender === 'male') {
     baseBmr += 5
   } else {
@@ -184,9 +176,9 @@ const tdee = computed(() => {
 const CALORIES_PER_KG_FAT = 7700
 
 const weeklyWeightChange = computed(() => {
-  if (tdee.value === 0 || props.formData.goals.daily_calorie_target === 0) return 0
+  if (tdee.value === 0 || props.formData.goals!.daily_calorie_target === 0) return 0
   const totalDailyBurn = tdee.value
-  const dailyDeficit = totalDailyBurn - props.formData.goals.daily_calorie_target
+  const dailyDeficit = totalDailyBurn - props.formData.goals!.daily_calorie_target
   const weeklyDeficit = dailyDeficit * 7
   return weeklyDeficit / CALORIES_PER_KG_FAT
 })

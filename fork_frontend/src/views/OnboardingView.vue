@@ -61,8 +61,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
-import type { User, Goals } from '@/types/user'
+import { UserService } from '@/services/userService'
+import type { UserUpdateRequest, GoalsBase, Gender, ActivityLevels } from '@/types/api/user.types'
 import { getFormattedDateToday } from '@/helpers/utils'
 import StepPhysicalInformation from '@/components/OnboardingSteps/StepPhysicalInformation.vue'
 import StepActivityLevel from '@/components/OnboardingSteps/StepActivityLevel.vue'
@@ -70,25 +70,26 @@ import StepCalorieGoals from '@/components/OnboardingSteps/StepCalorieGoals.vue'
 import StepMacroGoals from '@/components/OnboardingSteps/StepMacroGoals.vue'
 
 const router = useRouter()
+const userService = new UserService()
 
 const currentStep = ref(1)
 const totalSteps = ref(4)
 const saving = ref(false)
 const showSuccessModal = ref(false)
 
-const formData = ref({
+const formData = ref<UserUpdateRequest>({
   weight: 0,
   height: 0,
   age: 0,
-  gender: '',
-  activity_level: '',
+  gender: '' as Gender,
+  activity_level: '' as ActivityLevels,
   goals: {
     daily_calorie_target: 0,
     daily_calorie_burn_target: 0,
     daily_protein_target: 0,
     daily_carbs_target: 0,
     daily_fat_target: 0,
-  } as Goals,
+  } as GoalsBase,
 })
 
 const progress = computed(() => {
@@ -101,42 +102,35 @@ const canProceed = computed(() => {
   switch (currentStep.value) {
     case 1:
       return (
-        formData.value.weight > 0 &&
-        formData.value.height > 0 &&
-        formData.value.age > 0 &&
-        formData.value.gender !== ''
+        formData.value.weight! > 0 &&
+        formData.value.height! > 0 &&
+        formData.value.age! > 0 &&
+        formData.value.gender! !== ('' as Gender)
       )
     case 2:
-      return formData.value.activity_level !== ''
+      return formData.value.activity_level! !== ('' as ActivityLevels)
     case 3:
-      return formData.value.goals.daily_calorie_target > 0
+      return formData.value.goals!.daily_calorie_target > 0
     case 4:
       return (
-        formData.value.goals.daily_protein_target > 0 ||
-        formData.value.goals.daily_carbs_target > 0 ||
-        formData.value.goals.daily_fat_target > 0
+        formData.value.goals!.daily_protein_target > 0 ||
+        formData.value.goals!.daily_carbs_target > 0 ||
+        formData.value.goals!.daily_fat_target > 0
       )
     default:
       return false
   }
 })
 
-const updateField = (field: string, value: string | number) => {
-  if (field === 'gender') {
-    formData.value.gender = value as string
-  } else if (field === 'weight') {
-    formData.value.weight = value as number
-  } else if (field === 'height') {
-    formData.value.height = value as number
-  } else if (field === 'age') {
-    formData.value.age = value as number
-  } else if (field === 'activity_level') {
-    formData.value.activity_level = value as string
+const updateField = (field: keyof UserUpdateRequest, value: any) => {
+  if (field === 'goals') {
+    return
   }
+  formData.value[field] = value
 }
 
-const updateGoalField = (field: string, value: number) => {
-  formData.value.goals[field as keyof Goals] = value
+const updateGoalField = (field: keyof GoalsBase, value: number) => {
+  formData.value.goals![field] = value
 }
 
 const nextStep = async () => {
@@ -163,20 +157,12 @@ const saveProfile = async () => {
 
     const user_id = user_local.user_id
 
-    const userData: Partial<User> = {
-      weight: formData.value.weight,
-      height: formData.value.height,
-      age: formData.value.age,
-      gender: formData.value.gender,
-      activity_level: formData.value.activity_level,
-      goals: formData.value.goals,
+    const userData: UserUpdateRequest = {
+      ...formData.value,
       onboarding_finished: true,
     }
 
-    await fetchWrapper.patch(
-      `/api/v1/user/${user_id}?weight_date_overwrite=${getFormattedDateToday()}`,
-      userData,
-    )
+    await userService.updateUser(user_id, userData, getFormattedDateToday())
     showSuccessModal.value = true
   } catch (err) {
     console.error('Error saving profile:', err)
@@ -203,23 +189,10 @@ onMounted(async () => {
     }
 
     const user_id = user_local.user_id
-    const user = await fetchWrapper.get(`/api/v1/user/${user_id}`)
+    const user = await userService.getUser(user_id)
 
     if (user) {
-      formData.value = {
-        weight: user.weight || 0,
-        height: user.height || 0,
-        age: user.age || 0,
-        gender: user.gender || '',
-        activity_level: user.activity_level || '',
-        goals: {
-          daily_calorie_target: user.goals?.daily_calorie_target || 0,
-          daily_calorie_burn_target: user.goals?.daily_calorie_burn_target || 0,
-          daily_protein_target: user.goals?.daily_protein_target || 0,
-          daily_carbs_target: user.goals?.daily_carbs_target || 0,
-          daily_fat_target: user.goals?.daily_fat_target || 0,
-        },
-      }
+      formData.value = { ...user } as UserUpdateRequest
     }
   } catch (err) {
     console.error('Error loading user data:', err)

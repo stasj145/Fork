@@ -79,23 +79,17 @@ import IconWeight from '@/components/icons/IconWeight.vue'
 import IconHeight from '@/components/icons/IconHeight.vue'
 import IconAge from '@/components/icons/IconAge.vue'
 import IconGender from '@/components/icons/IconGender.vue'
-
-interface FormData {
-  weight: number
-  height: number
-  age: number
-  gender: string
-}
+import type { UserUpdateRequest } from '@/types/api/user.types'
 
 defineProps<{
-  formData: FormData
+  formData: UserUpdateRequest
 }>()
 
 const emit = defineEmits<{
-  update: [field: string, value: string | number]
+  update: [field: keyof UserUpdateRequest, value: any]
 }>()
 
-const updateField = (field: string, value: string) => {
+const updateField = (field: keyof UserUpdateRequest, value: string) => {
   emit('update', field, field === 'gender' ? value : parseFloat(value) || 0)
 }
 </script>

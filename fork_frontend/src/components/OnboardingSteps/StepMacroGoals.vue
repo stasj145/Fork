@@ -4,7 +4,7 @@
     <p class="step-description">Set your daily macro targets (in grams)</p>
 
     <!-- Macro Suggestions Info Box -->
-    <div class="info-box" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
+    <div class="info-box" v-if="hasPhysicalData && formData.goals!.daily_calorie_target > 0">
       <div class="info-box-header">
         <IconInfo class="info-icon"></IconInfo>
         <span class="info-title">Suggested Macro Targets</span>
@@ -36,7 +36,7 @@
           <IconProtein class="input-icon"></IconProtein>
           <input
             id="daily_protein_target"
-            :value="formData.goals.daily_protein_target"
+            :value="formData.goals!.daily_protein_target"
             @input="
               updateGoalField('daily_protein_target', ($event.target as HTMLInputElement).value)
             "
@@ -58,7 +58,7 @@
           <IconFat class="input-icon"></IconFat>
           <input
             id="daily_fat_target"
-            :value="formData.goals.daily_fat_target"
+            :value="formData.goals!.daily_fat_target"
             @input="updateGoalField('daily_fat_target', ($event.target as HTMLInputElement).value)"
             type="number"
             min="0"
@@ -67,7 +67,7 @@
             placeholder="e.g., 70"
           />
         </div>
-        <div class="input-hint" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
+        <div class="input-hint" v-if="hasPhysicalData && formData.goals!.daily_calorie_target > 0">
           Suggested: {{ suggestedFat }} g ({{ fatPercentage }}% of calories)
         </div>
       </div>
@@ -78,7 +78,7 @@
           <IconCarbs class="input-icon"></IconCarbs>
           <input
             id="daily_carbs_target"
-            :value="formData.goals.daily_carbs_target"
+            :value="formData.goals!.daily_carbs_target"
             @input="
               updateGoalField('daily_carbs_target', ($event.target as HTMLInputElement).value)
             "
@@ -89,7 +89,7 @@
             placeholder="e.g., 200"
           />
         </div>
-        <div class="input-hint" v-if="hasPhysicalData && formData.goals.daily_calorie_target > 0">
+        <div class="input-hint" v-if="hasPhysicalData && formData.goals!.daily_calorie_target > 0">
           Suggested: {{ suggestedCarbs }} g ({{ carbsPercentage }}% of calories)
         </div>
       </div>
@@ -103,42 +103,30 @@ import IconProtein from '@/components/icons/IconProtein.vue'
 import IconCarbs from '@/components/icons/IconCarbs.vue'
 import IconFat from '@/components/icons/IconFat.vue'
 import IconInfo from '@/components/icons/IconInfo.vue'
-
-interface Goals {
-  daily_calorie_target: number
-  daily_calorie_burn_target: number
-  daily_protein_target: number
-  daily_carbs_target: number
-  daily_fat_target: number
-}
-
-interface FormData {
-  weight: number
-  height: number
-  age: number
-  gender: string
-  activity_level: string
-  goals: Goals
-}
+import type { Gender, GoalsBase, UserUpdateRequest } from '@/types/api/user.types'
 
 const props = defineProps<{
-  formData: FormData
+  formData: UserUpdateRequest
 }>()
 
 const emit = defineEmits<{
-  update: [field: string, value: number]
+  update: [field: keyof GoalsBase, value: number]
 }>()
 
-const updateGoalField = (field: string, value: string) => {
+const updateGoalField = (field: keyof GoalsBase, value: string) => {
   emit('update', field, parseFloat(value) || 0)
 }
 
 const hasPhysicalData = computed(() => {
   return (
+    props.formData.weight &&
+    props.formData.height &&
+    props.formData.age &&
+    props.formData.gender &&
     props.formData.weight > 0 &&
     props.formData.height > 0 &&
     props.formData.age > 0 &&
-    props.formData.gender !== ''
+    props.formData.gender !== ('' as Gender)
   )
 })
 
@@ -151,7 +139,7 @@ const weightBasedProtein = 1.7 // g per kg body weight
 
 const suggestedProtein = computed(() => {
   if (!hasPhysicalData.value) return 0
-  return Math.round(props.formData.weight * weightBasedProtein)
+  return Math.round(props.formData.weight! * weightBasedProtein)
 })
 
 const proteinCalories = computed(() => {
@@ -159,13 +147,13 @@ const proteinCalories = computed(() => {
 })
 
 const proteinPercentage = computed(() => {
-  if (props.formData.goals.daily_calorie_target === 0) return 0
-  return Math.round((proteinCalories.value / props.formData.goals.daily_calorie_target) * 100)
+  if (props.formData.goals!.daily_calorie_target === 0) return 0
+  return Math.round((proteinCalories.value / props.formData.goals!.daily_calorie_target) * 100)
 })
 
 const suggestedFat = computed(() => {
-  if (props.formData.goals.daily_calorie_target === 0) return 0
-  const fatCalories = props.formData.goals.daily_calorie_target * 0.25 // 25% from fat
+  if (props.formData.goals!.daily_calorie_target === 0) return 0
+  const fatCalories = props.formData.goals!.daily_calorie_target * 0.25 // 25% from fat
   return Math.round(fatCalories / 9) // 9 kcal per gram of fat
 })
 
@@ -174,17 +162,17 @@ const fatPercentage = computed(() => {
 })
 
 const suggestedCarbs = computed(() => {
-  if (props.formData.goals.daily_calorie_target === 0) return 0
+  if (props.formData.goals!.daily_calorie_target === 0) return 0
   const proteinCals = proteinCalories.value
   const fatCals = suggestedFat.value * 9
-  const remainingCals = props.formData.goals.daily_calorie_target - proteinCals - fatCals
+  const remainingCals = props.formData.goals!.daily_calorie_target - proteinCals - fatCals
   return Math.round(remainingCals / 4) // 4 kcal per gram of carbs
 })
 
 const carbsPercentage = computed(() => {
-  if (props.formData.goals.daily_calorie_target === 0) return 0
+  if (props.formData.goals!.daily_calorie_target === 0) return 0
   const carbsCals = suggestedCarbs.value * 4
-  return Math.round((carbsCals / props.formData.goals.daily_calorie_target) * 100)
+  return Math.round((carbsCals / props.formData.goals!.daily_calorie_target) * 100)
 })
 </script>
 

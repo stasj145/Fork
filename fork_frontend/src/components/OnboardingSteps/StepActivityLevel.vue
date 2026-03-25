@@ -44,20 +44,17 @@
 
 <script setup lang="ts">
 import IconActivityLevel from '@/components/icons/IconActivityLevel.vue'
-
-interface FormData {
-  activity_level: string
-}
+import type { UserUpdateRequest } from '@/types/api/user.types'
 
 defineProps<{
-  formData: FormData
+  formData: UserUpdateRequest
 }>()
 
 const emit = defineEmits<{
-  update: [field: string, value: string]
+  update: [field: keyof UserUpdateRequest, value: any]
 }>()
 
-const updateField = (field: string, value: string) => {
+const updateField = (field: keyof UserUpdateRequest, value: string) => {
   emit('update', field, value)
 }
 </script>
