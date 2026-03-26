@@ -46,26 +46,35 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType } from 'vue'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
 import { getFormattedDate } from '@/helpers/utils'
 import IconCancel from '@/components/icons/IconCancel.vue'
 import ErrorModal from '@/components/ErrorModal.vue'
 import Spinner from '@/components/Spinner.vue'
 import IconAdd from '../icons/IconAdd.vue'
-import type { ActivityEntry } from '@/types/activityLog'
 import type { UserInDB } from '@/types/api/user.types'
 import type { ActivityDetailed } from '@/types/api/activity.types'
 import { ActivityService } from '@/services/activityService'
+import type {
+  ActivityEntryCreateRequest,
+  ActivityEntryInDB,
+  ActivityEntryUpdateRequest,
+} from '@/types/api/activityLog.types'
+import { ActivityLogService } from '@/services/activityLogService'
 
-const selectedActivity = defineModel<ActivityDetailed>('selectedActivity', { required: true })
-const logEntry = defineModel<ActivityEntry | null>('logEntry', { default: null })
+// ============================================================================
+// VARIABLES/CONSTANTS
+// ============================================================================
 
-const emit = defineEmits(['close-requested', 'log-updated'])
-
+// Errors
 const showAddingOrUpdatingError = ref(false)
 const errorDetails = ref('N/A')
+
+// Loading
 const adding = ref(false)
 
+// Data
+const selectedActivity = defineModel<ActivityDetailed>('selectedActivity', { required: true })
+const logEntry = defineModel<ActivityEntryInDB | null>('logEntry', { default: null })
 const props = defineProps({
   user: {
     type: Object as PropType<UserInDB>,
@@ -73,19 +82,27 @@ const props = defineProps({
   },
 })
 
-const activityService = new ActivityService()
+// Input
+const manualCaloriesBurned = ref<number | null>(null)
 
 interface ActivityEntryInfo {
   duration: number
   unit: string
 }
-
 const activityEntryInfo = ref<ActivityEntryInfo>({
   duration: 0.0,
   unit: 'minutes',
 })
 
-const manualCaloriesBurned = ref<number | null>(null)
+// Services
+const activityService = new ActivityService()
+const activityLogService = new ActivityLogService()
+
+const emit = defineEmits(['close-requested', 'log-updated'])
+
+// ============================================================================
+// FUNCTIONS
+// ============================================================================
 
 const calculatecDuration = () => {
   if (activityEntryInfo.value.unit == 'minutes') {
@@ -180,12 +197,19 @@ async function APIAddOrUpdateActivityEntry(
 ) {
   if (activityId) {
     //create
-    const body = { activity_id: activityId, duration: duration, calories_burned: caloriesBurned }
-    await fetchWrapper.post(`/api/v1/log/day/${getFormattedDate()}/activity`, body)
+    const body: ActivityEntryCreateRequest = {
+      activity_id: activityId,
+      duration: duration,
+      calories_burned: caloriesBurned,
+    }
+    await activityLogService.addActivityToLog(getFormattedDate(), body)
   } else if (logEntryId) {
     //update
-    const body = { duration: duration, calories_burned: caloriesBurned }
-    await fetchWrapper.patch(`/api/v1/log/day/${getFormattedDate()}/activity/${logEntryId}`, body)
+    const body: ActivityEntryUpdateRequest = {
+      duration: duration,
+      calories_burned: caloriesBurned,
+    }
+    await activityLogService.updateActivityEntry(getFormattedDate(), logEntryId, body)
   } else {
     showAddingOrUpdatingError.value = true
     errorDetails.value =
@@ -193,7 +217,7 @@ async function APIAddOrUpdateActivityEntry(
   }
 }
 
-function setupLogUpdateMode(logEntry: ActivityEntry) {
+function setupLogUpdateMode(logEntry: ActivityEntryInDB) {
   if (logEntry.duration % 1 === 0) {
     activityEntryInfo.value.unit = 'hours'
     activityEntryInfo.value.duration = logEntry.duration

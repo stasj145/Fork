@@ -32,9 +32,9 @@ import { onMounted, ref, type PropType } from 'vue'
 import ActivityDetailsInfo from './ActivityDetailsInfo.vue'
 import ActionButons from './ActionButons.vue'
 import AddActivityToLogMenu from './AddActivityToLogMenu.vue'
-import type { ActivityEntry } from '@/types/activityLog'
 import type { UserInDB } from '@/types/api/user.types'
 import type { ActivityDetailed } from '@/types/api/activity.types'
+import type { ActivityEntryInDB } from '@/types/api/activityLog.types'
 
 // ============================================================================
 // VARIABLES/CONSTANTS
@@ -42,7 +42,7 @@ import type { ActivityDetailed } from '@/types/api/activity.types'
 
 // Data
 const selectedActivity = defineModel<ActivityDetailed | null>('selectedActivity')
-const logEntry = defineModel<ActivityEntry | null>('logEntry', { default: null })
+const logEntry = defineModel<ActivityEntryInDB | null>('logEntry', { default: null })
 defineProps({
   user: {
     type: Object as PropType<UserInDB>,
