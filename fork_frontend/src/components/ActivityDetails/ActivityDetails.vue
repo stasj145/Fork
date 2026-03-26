@@ -27,31 +27,39 @@
   </div>
 </template>
 
-<!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
 import { onMounted, ref, type PropType } from 'vue'
-import type { Activity } from '@/types/activity.ts'
 import ActivityDetailsInfo from './ActivityDetailsInfo.vue'
 import ActionButons from './ActionButons.vue'
 import AddActivityToLogMenu from './AddActivityToLogMenu.vue'
 import type { ActivityEntry } from '@/types/activityLog'
-import type { User } from '@/types/user'
+import type { UserInDB } from '@/types/api/user.types'
+import type { ActivityDetailed } from '@/types/api/activity.types'
 
-const creationMode = defineModel<boolean>('creationMode', { default: false })
-const selectedActivity = defineModel<Activity | null>('selectedActivity')
+// ============================================================================
+// VARIABLES/CONSTANTS
+// ============================================================================
+
+// Data
+const selectedActivity = defineModel<ActivityDetailed | null>('selectedActivity')
 const logEntry = defineModel<ActivityEntry | null>('logEntry', { default: null })
-
 defineProps({
   user: {
-    type: Object as PropType<User>,
+    type: Object as PropType<UserInDB>,
     required: true,
   },
 })
 
-const emit = defineEmits(['activity-deleted', 'entry-updated', 'back-requested'])
-
+// Modes
+const creationMode = defineModel<boolean>('creationMode', { default: false })
 const isAddToLogMode = ref(false)
 const isEditingMode = ref(false)
+
+const emit = defineEmits(['activity-deleted', 'entry-updated', 'back-requested'])
+
+// ============================================================================
+// FUNCTIONS
+// ============================================================================
 
 function handleActivityDeleted() {
   emit('activity-deleted', selectedActivity.value?.id)

@@ -44,7 +44,6 @@
   </div>
 </template>
 
-<!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType } from 'vue'
 import { fetchWrapper } from '@/helpers/fetch-wrapper'
@@ -54,10 +53,11 @@ import ErrorModal from '@/components/ErrorModal.vue'
 import Spinner from '@/components/Spinner.vue'
 import IconAdd from '../icons/IconAdd.vue'
 import type { ActivityEntry } from '@/types/activityLog'
-import type { Activity } from '@/types/activity'
-import type { User } from '@/types/user'
+import type { UserInDB } from '@/types/api/user.types'
+import type { ActivityDetailed } from '@/types/api/activity.types'
+import { ActivityService } from '@/services/activityService'
 
-const selectedActivity = defineModel<Activity>('selectedActivity', { required: true })
+const selectedActivity = defineModel<ActivityDetailed>('selectedActivity', { required: true })
 const logEntry = defineModel<ActivityEntry | null>('logEntry', { default: null })
 
 const emit = defineEmits(['close-requested', 'log-updated'])
@@ -68,10 +68,12 @@ const adding = ref(false)
 
 const props = defineProps({
   user: {
-    type: Object as PropType<User>,
+    type: Object as PropType<UserInDB>,
     required: true,
   },
 })
+
+const activityService = new ActivityService()
 
 interface ActivityEntryInfo {
   duration: number
@@ -100,7 +102,8 @@ const calculateCaloriesBurned = computed(() => {
   let calories: number = 0
   const duration: number = calculatecDuration()
 
-  calories = selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0]?.weight * duration
+  calories =
+    selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0]?.weight * duration
 
   return parseFloat(calories.toFixed(1))
 })
@@ -157,9 +160,9 @@ async function addOrUpdateActivityInLog() {
   }
 }
 
-async function saveActivity(updatedActivity: Activity) {
+async function saveActivity(updatedActivity: ActivityDetailed) {
   try {
-    const results: Activity = await fetchWrapper.post('/api/v1/activity/item/', updatedActivity)
+    const results: ActivityDetailed = await activityService.createActivity(updatedActivity)
     selectedActivity.value = results
   } catch (err) {
     if (err instanceof Error) {

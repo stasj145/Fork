@@ -7,9 +7,18 @@
 // SHARED TYPES
 // ============================================================================
 
-export type Gender = 'male' | 'female'
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
 
-export type ActivityLevels = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'super_active'
+export enum ActivityLevels {
+  SEDENTARY = 'sedentary',
+  LIGHTLY_ACTIVE = 'lightly_active',
+  MODERATELY_ACTIVE = 'moderately_active',
+  VERY_ACTIVE = 'very_active',
+  SUPER_ACTIVE = 'super_active',
+}
 
 export interface GoalsBase {
   daily_calorie_target: number

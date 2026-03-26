@@ -58,8 +58,6 @@
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
 import { ref } from 'vue'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
-import type { Activity } from '@/types/activity'
 import IconEdit from '@/components/icons/IconEdit.vue'
 import IconBack from '@/components/icons/IconBack.vue'
 import IconCancel from '@/components/icons/IconCancel.vue'
@@ -68,10 +66,23 @@ import ErrorModal from '@/components/ErrorModal.vue'
 import Spinner from '@/components/Spinner.vue'
 import IconDelete from '../icons/IconDelete.vue'
 import IconAdd from '../icons/IconAdd.vue'
+import type { ActivityDetailed } from '@/types/api/activity.types'
+import { ActivityService } from '@/services/activityService'
 
-const emit = defineEmits(['activity-deleted', 'back-requested', 'add-requested', 'toggle-editing'])
+// ============================================================================
+// VARIABLES/CONSTANTS
+// ============================================================================
 
-const selectedActivity = defineModel<Activity>('selectedActivity', { required: true })
+// Errors
+const showSavingError = ref(false)
+const showDeletionError = ref(false)
+const errorDetails = ref('N/A')
+
+// Loading
+const saving = ref(false)
+const deleting = ref(false)
+
+// Modes
 const creationMode = defineModel<boolean>('creationMode', { default: false })
 
 const props = defineProps({
@@ -81,13 +92,21 @@ const props = defineProps({
   },
 })
 
-const showSavingError = ref(false)
-const showDeletionError = ref(false)
-const errorDetails = ref('N/A')
-const saving = ref(false)
-const deleting = ref(false)
+// Visibility toggles
 const deleteConfirmed = ref(false)
 const isEditing = ref(creationMode.value || props.editingMode ? true : false)
+
+// Data
+const selectedActivity = defineModel<ActivityDetailed>('selectedActivity', { required: true })
+
+const emit = defineEmits(['activity-deleted', 'back-requested', 'add-requested', 'toggle-editing'])
+
+// Services
+const activityService = new ActivityService()
+
+// ============================================================================
+// FUNCTIONS
+// ============================================================================
 
 function toggleEditing() {
   isEditing.value = !isEditing.value
@@ -103,17 +122,17 @@ function emitAddMode() {
   emit('add-requested')
 }
 
-async function saveFood(updatedActivity: Activity) {
+async function saveFood(updatedActivity: ActivityDetailed) {
   deleteConfirmed.value = false
   saving.value = true
   try {
     if (creationMode.value) {
-      const results: Activity = await fetchWrapper.post('/api/v1/activity/item/', updatedActivity)
+      const results: ActivityDetailed = await activityService.createActivity(updatedActivity)
       creationMode.value = false
       selectedActivity.value = results
     } else {
-      const results: Activity = await fetchWrapper.patch(
-        `/api/v1/activity/item/${updatedActivity.id}`,
+      const results: ActivityDetailed = await activityService.updateActivity(
+        updatedActivity.id,
         updatedActivity,
       )
       selectedActivity.value = results
@@ -131,14 +150,14 @@ async function saveFood(updatedActivity: Activity) {
   }
 }
 
-async function deleteFood(ActivityToDelete: Activity) {
+async function deleteFood(ActivityToDelete: ActivityDetailed) {
   if (!deleteConfirmed.value) {
     deleteConfirmed.value = true
     return
   }
   deleting.value = true
   try {
-    await fetchWrapper.delete(`/api/v1/activity/item/${ActivityToDelete.id}`)
+    await activityService.deleteActivity(ActivityToDelete.id)
   } catch (err) {
     if (err instanceof Error) {
       showDeletionError.value = true

@@ -11,7 +11,11 @@
         <input type="number" min="0" max="100" v-model="selectedActivity.calories_burned_kg_h" />
       </div>
       <div class="activity-info-item">
-        <label>Calories/h at current weight ({{ user.weight_history[0]? user.weight_history[0].weight.toFixed(1) : 80 }}kg)</label>
+        <label
+          >Calories/h at current weight ({{
+            user.weight_history[0] ? user.weight_history[0].weight.toFixed(1) : 80
+          }}kg)</label
+        >
         <span>{{ caloriesPerHourAtUserWeight }} </span>
       </div>
     </div>
@@ -21,10 +25,10 @@
 <!-- eslint-disable vue/no-mutating-props  -->
 <script setup lang="ts">
 import { computed, type PropType } from 'vue'
-import type { Activity } from '@/types/activity'
-import type { User } from '@/types/user'
+import type { UserInDB } from '@/types/api/user.types'
+import type { ActivityDetailed } from '@/types/api/activity.types'
 
-const selectedActivity = defineModel<Activity | null>('selectedActivity')
+const selectedActivity = defineModel<ActivityDetailed | null>('selectedActivity')
 
 const props = defineProps({
   isEditingMode: {
@@ -32,14 +36,16 @@ const props = defineProps({
     default: false,
   },
   user: {
-    type: Object as PropType<User>,
+    type: Object as PropType<UserInDB>,
     required: true,
   },
 })
 
 const caloriesPerHourAtUserWeight = computed(() => {
   if (!selectedActivity.value || !props.user.weight_history[0]) return 0
-  return (selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0].weight).toFixed(1)
+  return (
+    selectedActivity.value.calories_burned_kg_h * props.user.weight_history[0].weight
+  ).toFixed(1)
 })
 </script>
 

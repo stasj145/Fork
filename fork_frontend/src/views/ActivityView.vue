@@ -3,7 +3,7 @@
     <ErrorModal
       v-model="showLoadingError"
       title="Loading Error"
-      message="Unable to load user data"
+      message="Unable to load data"
       :details="errorDetails"
     ></ErrorModal>
     <div v-if="!selectedActivity && user" class="activity-view-content">
@@ -21,8 +21,8 @@
         </div>
         <button @click="submitSearch" class="search-submit-btn"><IconSearch></IconSearch></button>
         <select class="search-type-select" v-model="searchType">
-          <option class="search-type-option" value="local">local</option>
-          <option class="search-type-option" value="personal">personal</option>
+          <option class="search-type-option" :value="ActivitySources.LOCAL">local</option>
+          <option class="search-type-option" :value="ActivitySources.PERSONAL">personal</option>
         </select>
       </div>
       <div class="results-root">
@@ -112,64 +112,63 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { fetchWrapper } from '@/helpers/fetch-wrapper'
-import type { Activity } from '@/types/activity'
-import { createEmptyActivity } from '@/types/activity'
-import type { User } from '@/types/user'
 import ErrorModal from '@/components/ErrorModal.vue'
 import ActivityDetails from '@/components/ActivityDetails/ActivityDetails.vue'
 
 import IconAdd from '@/components/icons/IconAdd.vue'
 import IconSearch from '@/components/icons/IconSearch.vue'
+import type { UserInDB } from '@/types/api/user.types'
+import { UserService } from '@/services/userService'
+import { ActivityService } from '@/services/activityService'
+import {
+  ActivitySources,
+  createEmptyActivity,
+  type ActivityInDB,
+  type ActivitySearchRequest,
+} from '@/types/api/activity.types'
 
+// ============================================================================
+// VARIABLES/CONSTANTS
+// ============================================================================
+
+// Error
 const showLoadingError = ref(false)
 const errorDetails = ref('')
-const user = ref<User | null>(null)
-const searchQuery = ref('')
-const searchResults = ref<Activity[]>([])
-const lastLoggedActivity = ref<Activity[]>([])
+
+// Loading
 const loading = ref(false)
 const loadingLastLogged = ref(false)
+
+// Visibility toggles
 const showResults = ref(false)
 const showResultsLastLogged = ref(false)
-const debounceTimer = ref<number | null>(null)
-const selectedActivity = ref<Activity | null>(null)
 const addMode = ref(false)
-const searchType = ref('local')
 
-interface ActivitySearch {
-  query: string
-  source: string
-  limit: number
-}
+// Input
+const searchQuery = ref('')
+const searchType = ref<ActivitySources>(ActivitySources.LOCAL)
 
-const loadUserData = async () => {
-  try {
-    const user_local = JSON.parse(localStorage.getItem('user') || 'null')
-    if (!user_local || !user_local.user_id) {
-      throw new Error('User not found in local storage')
-    }
-    loading.value = true
-    const user_id = user_local.user_id
+// Data
+const user = ref<UserInDB | null>(null)
+const searchResults = ref<ActivityInDB[]>([])
+const lastLoggedActivity = ref<ActivityInDB[]>([])
+const selectedActivity = ref<ActivityInDB | null>(null)
+const debounceTimer = ref<number | null>(null)
 
-    user.value = await fetchWrapper.get(`/api/v1/user/${user_id}`)
-  } catch (err) {
-    console.error('Error loading user data:', err)
-    if (err instanceof Error) {
-      showLoadingError.value = true
-      errorDetails.value = err.message || err.toString() || 'Unknown error'
-    }
-  } finally {
-    loading.value = false
-  }
-}
+// Services
+const userService = new UserService()
+const activityService = new ActivityService()
+
+// ============================================================================
+// FUNCTIONS
+// ============================================================================
 
 function closeActivityDetails() {
   selectedActivity.value = null
   addMode.value = false
 }
 
-const selectActivity = (activity: Activity) => {
+const selectActivity = (activity: ActivityInDB) => {
   selectedActivity.value = activity
 }
 
@@ -210,14 +209,14 @@ const performSearch = async () => {
   loading.value = true
   showResults.value = true
 
-  const query: ActivitySearch = {
+  const query: ActivitySearchRequest = {
     query: searchQuery.value,
     source: searchType.value,
     limit: 20,
   }
 
   try {
-    const results = await fetchWrapper.post(`/api/v1/activity/search`, query)
+    const results = await activityService.searchActivities(query)
     searchResults.value = results || []
   } catch (error) {
     console.error('Search error:', error)
@@ -233,8 +232,8 @@ const clearSearch = () => {
 }
 
 const openAddActivity = () => {
-  selectedActivity.value = createEmptyActivity()
   addMode.value = true
+  selectedActivity.value = createEmptyActivity()
 }
 
 const clearResults = () => {
@@ -252,17 +251,40 @@ const handleActivityDeleted = (activityId: string) => {
 }
 
 const getLastLoggedActivity = async () => {
-  loadingLastLogged.value = true
   showResultsLastLogged.value = true
+  loadingLastLogged.value = true
 
   try {
-    const results = await fetchWrapper.get(`/api/v1/activity/last_logged?n_items=20`)
+    const results = await activityService.getLastLogged(20)
     lastLoggedActivity.value = results || []
   } catch (error) {
     console.error('Last logged error:', error)
     lastLoggedActivity.value = []
+    if (error instanceof Error) {
+      showLoadingError.value = true
+      errorDetails.value = error.message || error.toString() || 'Unknown error'
+    }
   } finally {
     loadingLastLogged.value = false
+  }
+}
+
+const loadUserData = async () => {
+  try {
+    const user_local = JSON.parse(localStorage.getItem('user') || 'null')
+    if (!user_local || !user_local.user_id) {
+      throw new Error('User not found in local storage')
+    }
+    loading.value = true
+    user.value = await userService.getUser(user_local.user_id)
+  } catch (err) {
+    console.error('Error loading user data:', err)
+    if (err instanceof Error) {
+      showLoadingError.value = true
+      errorDetails.value = err.message || err.toString() || 'Unknown error'
+    }
+  } finally {
+    loading.value = false
   }
 }
 

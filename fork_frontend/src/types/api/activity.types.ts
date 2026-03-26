@@ -7,7 +7,10 @@
 // SHARED TYPES
 // ============================================================================
 
-export type ActivitySources = 'local' | 'personal'
+export enum ActivitySources {
+  LOCAL = 'local',
+  PERSONAL = 'personal',
+}
 
 export interface ActivityInDB {
   id: string
@@ -39,3 +42,15 @@ export interface ActivitySearchRequest {
   limit?: number | null
   source?: ActivitySources | null
 }
+
+// ============================================================================
+// CONSTRUCTORS
+// ============================================================================
+
+export const createEmptyActivity = (): ActivityInDB => ({
+  id: '',
+  user_id: '',
+  name: '',
+  calories_burned_kg_h: 0.0,
+  private: false,
+})
